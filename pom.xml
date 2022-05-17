@@ -186,6 +186,11 @@
                           <fileset dir="${project.basedir}/web" />
                       </copy>
 
+                      <!-- Copy /scripts to /dist/scripts -->
+                      <copy todir="${project.basedir}/dist/scripts" >
+                          <fileset dir="${project.basedir}/scripts" />
+                      </copy>
+
                     </target>
                   </configuration>
                   <goals>
