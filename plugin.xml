@@ -4,20 +4,27 @@
   <webapp>
 
     <includes>
-
       <script src="app/analytics/DocumentSearch.js" type="text/javascript"></script>
       <script src="app/analytics/DocumentAnalysis.js" type="text/javascript"></script>
       <script src="app/analytics/DocumentComparison.js" type="text/javascript"></script>
       <script src="app/admin/ComparisonAdmin.js" type="text/javascript"></script>
-
     </includes>
 
 
     <dashboards>
-
       <dashboard name="Document Analysis" class="bluewave.analytics.DocumentAnalysis"/>
-
     </dashboards>
+
+
+    <extensions>
+      <admin type="panel">
+        <config
+          title="Comparison"
+          class="bluewave.admin.ComparisonAdmin"
+          icon="fas fa-not-equal"
+        />
+      </admin>
+    </extensions>
 
   </webapp>
 
