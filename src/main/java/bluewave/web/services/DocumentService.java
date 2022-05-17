@@ -888,7 +888,7 @@ public class DocumentService extends WebService {
         if (!outputDir.exists()) outputDir.create();
 
       //Get script
-        javaxt.io.File[] scripts = getScriptDir().getFiles("pdf_to_img.py", true);
+        javaxt.io.File[] scripts = getScripts("pdf_to_img.py");
         if (scripts.length==0) return new ServiceResponse(500, "Script not found");
 
 
@@ -932,7 +932,7 @@ public class DocumentService extends WebService {
 
       //Get python script
         String scriptName = "compare_pdfs.py";
-        javaxt.io.File[] scripts = getScriptDir().getFiles(scriptName, true);
+        javaxt.io.File[] scripts = getScripts(scriptName);
         if (scripts.length==0) return new ServiceResponse(500, "Script not found");
         javaxt.io.File script = scripts[0];
 
