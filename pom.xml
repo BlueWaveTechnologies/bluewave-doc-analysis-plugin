@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+
+        <pdfbox.version>2.0.25</pdfbox.version>
+        <lucene.version>9.0.0</lucene.version>
+        <lucene.analyzers.version>8.11.1</lucene.analyzers.version>
+
+    </properties>
+
+
+  <!-- =========================================================== -->
+  <!--     Module Description                                      -->
+  <!-- =========================================================== -->
+    <groupId>bluewave</groupId>
+    <artifactId>bluewave-doc-analysis-plugin</artifactId>
+    <version>dev</version>
+    <packaging>jar</packaging>
+    <name>bluewave-doc-analysis-plugin</name>
+
+
+
+  <!-- =========================================================== -->
+  <!--     Dependency Management                                   -->
+  <!-- =========================================================== -->
+
+    <dependencies>
+
+        <!-- BlueWave -->
+        <dependency>
+          <groupId>bluewave</groupId>
+          <artifactId>bluewave</artifactId>
+          <version>dev</version>
+        </dependency>
+
+        <!-- PDFBox -->
+        <dependency>
+          <groupId>org.apache.pdfbox</groupId>
+          <artifactId>pdfbox</artifactId>
+          <version>${pdfbox.version}</version>
+        </dependency>
+
+        <!-- Lucene -->
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+            <version>${lucene.version}</version>
+        </dependency>
+
+        <!-- Lucene Query Parser -->
+        <dependency>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-queryparser</artifactId>
+          <version>${lucene.version}</version>
+        </dependency>
+
+        <!-- Lucene Analyzers -->
+        <dependency>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-analyzers-common</artifactId>
+          <version>${lucene.analyzers.version}</version>
+        </dependency>
+
+        <!-- Lucene Analyzers ICU -->
+        <dependency>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-analyzers-icu</artifactId>
+          <version>${lucene.analyzers.version}</version>
+        </dependency>
+
+        <!-- Lucene Highlighter -->
+        <dependency>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-highlighter</artifactId>
+          <version>${lucene.version}</version>
+        </dependency>
+
+    </dependencies>
+
+
+
+  <!-- =========================================================== -->
+  <!--     Build Info                                              -->
+  <!-- =========================================================== -->
+    <build>
+
+
+        <!-- Tell maven to include non-java files in the jar file -->
+        <resources>
+          <resource>
+            <directory>src/main/resources</directory>
+          </resource>
+          <resource>
+            <filtering>false</filtering>
+            <directory>src/main/java</directory>
+            <excludes>
+              <exclude>**/*.java</exclude>
+            </excludes>
+          </resource>
+        </resources>
+
+
+
+        <plugins>
+
+            <!-- Copy dependencies into the lib folder -->
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+
+            <!-- Create main app -->
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>bluewave.web.services.SupplyChainService</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
+
+            <!-- Create distribution folder (dist) -->
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-antrun-plugin</artifactId>
+              <version>1.8</version>
+              <executions>
+                <execution>
+                  <phase>install</phase>
+                  <configuration>
+                    <target>
+
+                      <!-- Move jar from /target to /dist -->
+                      <move file="${project.build.directory}/${project.artifactId}-${project.version}.jar" todir="${project.basedir}/dist" />
+
+
+                      <!-- Move pdf jars from /target/lib to /dist/lib -->
+                      <move file="${project.build.directory}/lib/pdfbox-${pdfbox.version}.jar" todir="${project.basedir}/dist/lib" />
+                      <move file="${project.build.directory}/lib/fontbox-${pdfbox.version}.jar" todir="${project.basedir}/dist/lib" />
+
+
+                      <!-- Move lucene jars from /target/lib to /dist/lib -->
+                      <move file="${project.build.directory}/lib/lucene-core-${lucene.version}.jar" todir="${project.basedir}/dist/lib" />
+                      <move file="${project.build.directory}/lib/lucene-highlighter-${lucene.version}.jar" todir="${project.basedir}/dist/lib" />
+                      <move file="${project.build.directory}/lib/lucene-memory-${lucene.version}.jar" todir="${project.basedir}/dist/lib" />
+                      <move file="${project.build.directory}/lib/lucene-queries-${lucene.version}.jar" todir="${project.basedir}/dist/lib" />
+                      <move file="${project.build.directory}/lib/lucene-queryparser-${lucene.version}.jar" todir="${project.basedir}/dist/lib" />
+                      <move file="${project.build.directory}/lib/lucene-sandbox-${lucene.version}.jar" todir="${project.basedir}/dist/lib" />
+
+                      <!-- Move lucene analyzer jars from /target/lib to /dist/lib -->
+                      <move file="${project.build.directory}/lib/lucene-analyzers-common-${lucene.analyzers.version}.jar" todir="${project.basedir}/dist/lib" />
+                      <move file="${project.build.directory}/lib/lucene-analyzers-icu-${lucene.analyzers.version}.jar" todir="${project.basedir}/dist/lib" />
+
+
+                      <!-- Move misc dependencies from /target/lib to /dist/lib -->
+                      <move file="${project.build.directory}/lib/icu4j-62.1.jar" todir="${project.basedir}/dist/lib" />
+                      <move file="${project.build.directory}/lib/commons-logging-1.2.jar" todir="${project.basedir}/dist/lib" />
+
+
+                      <!-- Copy plugin.xml to /dist -->
+                      <copy file="${project.basedir}/plugin.xml" todir="${project.basedir}/dist" />
+
+
+                      <!-- Copy /web to /dist -->
+                      <copy todir="${project.basedir}/dist/web" >
+                          <fileset dir="${project.basedir}/web" />
+                      </copy>
+
+                    </target>
+                  </configuration>
+                  <goals>
+                    <goal>run</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+
+
+      </plugins>
+    </build>
+
+
+</project>
