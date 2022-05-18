@@ -8,6 +8,9 @@
       <script src="app/analytics/DocumentAnalysis.js" type="text/javascript"></script>
       <script src="app/analytics/DocumentComparison.js" type="text/javascript"></script>
       <script src="app/admin/ComparisonAdmin.js" type="text/javascript"></script>
+      
+      <link href="style/doc-analysis.css" type="text/css" rel="stylesheet" />
+      
     </includes>
 
 
