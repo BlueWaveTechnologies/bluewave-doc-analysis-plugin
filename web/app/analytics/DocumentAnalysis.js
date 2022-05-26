@@ -451,7 +451,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
                     // set new link for this row in the grid
                     row.set("Comparison Results", getRowName(newSimilarities, originalSimilarities, row));
-
                 });
 
              // update formTotals object for use by settings form
@@ -1471,11 +1470,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             job.row.set("Comparison Results", "Pending...");
             getSimilarities(job.doc, job.otherDocs,
                 function(step, totalSteps, success){
-                    job.row.set("Comparison Results", Math.round((step/totalSteps)*100) + "%");
+                    if (success) job.row.set("Comparison Results", Math.round((step/totalSteps)*100) + "%");
                 },
-                function(similarities, originalSimilarities){
+                function(similarities, originalSimilarities, status){
+                    job.row.record.status = status; // set API query status
                     job.row.record.similarities = originalSimilarities;
                     job.row.set("Comparison Results", getRowName(similarities, originalSimilarities, job.row));
+
                     runJob();
                 }
             );
@@ -1487,6 +1488,25 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** getRowName
   //**************************************************************************
     var getRowName = function(similarities, originalSimilarities, row){
+
+        // show error if this record failed to run a document similarity
+        if (row.record.status !== true){
+            var summaryText = "Document comparison failed";
+            var summaryIcon = "fas fa-exclamation-triangle";
+            var summary = document.createElement("div");
+            summary.className = "document-analysis-comparison-results";
+            var icon = document.createElement("div");
+            icon.style.color = "red";
+            icon.className = summaryIcon;
+            summary.appendChild(icon);
+            var span = document.createElement("span");
+            span.innerText = summaryText;
+            span.style.color = "red";
+            summary.appendChild(span);
+
+            return summary;
+        };
+
         var numSimilarities = 0;
         var numOriginalSimilarities = 0;
         var totalMatches = 0;
@@ -1565,7 +1585,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             if (!comparisonsEnabled) otherDocs.splice(0,otherDocs.length);
 
             if (otherDocs.length===0){
-                if (onCompletion) onCompletion.apply(me, [similarities,originalSimilarities]);
+                if (onCompletion) onCompletion.apply(me, [similarities,originalSimilarities,true]);
                 return;
             }
 
@@ -1581,6 +1601,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         id: b,
                       // get the default, baseline filtered results from documentComparison
                         results: documentSimilarities.getFilteredResults(json)
+
                     });
                     originalSimilarities.push({
                         id: b,
@@ -1591,8 +1612,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     getSimilarity(doc, otherDocs);
                 },
                 failure: function(){
-                    if (onStep) onStep.apply(me, [steps,totalSteps,false]);
-                    getSimilarity(doc, otherDocs);
+                    if (onCompletion) onCompletion.apply(me, [similarities,originalSimilarities,false]);
+                    return;
                 }
             });
         };
