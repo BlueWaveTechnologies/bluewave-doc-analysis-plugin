@@ -141,8 +141,14 @@ def get_version():
 #-------------------------------------------------------------------------------
 # MAIN
 #-------------------------------------------------------------------------------
-def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
+def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sidecar_only=False):
     t0 = time.time()
+
+    if verbose: print('Reading files...')
+    file_data = get_file_data.main(filenames, regen_cache, version=VERSION)
+    if sidecar_only:
+        return
+
     assert len(filenames) >= 2, 'Must have at least 2 files to compare!'
 
     if not methods:
@@ -151,9 +157,6 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
     if verbose: print('Using methods:', ', '.join(methods))
 
     suspicious_pairs = []
-
-    if verbose: print('Reading files...')
-    file_data = get_file_data.main(filenames, regen_cache, version=VERSION)
 
     for i in range(len(filenames)-1):
         for j in range(i+1, len(filenames)):
@@ -308,6 +311,11 @@ if __name__ == '__main__':
         action='store_true'
     )
     parser.add_argument(
+        '--sidecar_only',
+        help='Just generate sidecar files, dont run analysis',
+        action='store_true'
+    )
+    parser.add_argument(
         '-v',
         '--verbose',
         help='Print things while running',
@@ -328,7 +336,8 @@ if __name__ == '__main__':
             methods=args.methods,
             pretty_print=args.pretty_print,
             verbose=args.verbose,
-            regen_cache=args.regen_cache
+            regen_cache=args.regen_cache,
+            sidecar_only=args.sidecar_only,
             )
 
 # Within-file tests:
