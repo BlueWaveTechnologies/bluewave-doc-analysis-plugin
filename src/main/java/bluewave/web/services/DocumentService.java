@@ -928,7 +928,7 @@ public class DocumentService extends WebService {
         if (documentIDs == null || documentIDs.length<2)
             return new ServiceResponse(400, "At least 2 documents are required");
 
-
+      //Compare documents and return result
         try{
             JSONObject result = getSimilarity(documentIDs, database);
             return new ServiceResponse(result);
@@ -938,7 +938,7 @@ public class DocumentService extends WebService {
         }
     }
 
-    
+
   //**************************************************************************
   //** getSimilarity
   //**************************************************************************
@@ -1067,57 +1067,50 @@ public class DocumentService extends WebService {
         }
 
 
-      //Execute script and return response
-        try{
 
-          //Execute script
-            JSONObject result = executeScript(script, params);
+      //Execute script
+        JSONObject result = executeScript(script, params);
 
 
-          //Replace file paths and insert documentID
-            JSONArray arr = result.get("files").toJSONArray();
-            for (int i=0; i<arr.length(); i++){
-                JSONObject json = arr.get(i).toJSONObject();
-                String fileName = json.get("filename").toString();
-                String filePath = json.get("path_to_file").toString();
-                javaxt.io.File f = new javaxt.io.File(filePath, fileName);
-                bluewave.app.Document document = null;
-                for (int j=0; j<files.size(); j++){
-                    javaxt.io.File file = files.get(j);
-                    if (file.toString().replace("\\", "/").equals(f.toString().replace("\\", "/"))){
-                        document = documents.get(j);
-                        break;
-                    }
-                }
-                json.set("document_id", document.getID());
-                json.remove("path_to_file");
-            }
-
-
-
-          //Cache the results
-            if (documents.size()==2){
-
-                if (docs.isEmpty()){
-                    bluewave.app.DocumentComparison dc = new bluewave.app.DocumentComparison();
-                    dc.setA(documents.get(0));
-                    dc.setB(documents.get(1));
-                    docs.add(dc);
-                }
-
-                for (bluewave.app.DocumentComparison dc : docs){
-                    dc.setInfo(result);
-                    dc.save();
+      //Replace file paths and insert documentID
+        JSONArray arr = result.get("files").toJSONArray();
+        for (int i=0; i<arr.length(); i++){
+            JSONObject json = arr.get(i).toJSONObject();
+            String fileName = json.get("filename").toString();
+            String filePath = json.get("path_to_file").toString();
+            javaxt.io.File f = new javaxt.io.File(filePath, fileName);
+            bluewave.app.Document document = null;
+            for (int j=0; j<files.size(); j++){
+                javaxt.io.File file = files.get(j);
+                if (file.toString().replace("\\", "/").equals(f.toString().replace("\\", "/"))){
+                    document = documents.get(j);
+                    break;
                 }
             }
+            json.set("document_id", document.getID());
+            json.remove("path_to_file");
+        }
 
 
-          //Return response
-            return result;
+
+      //Cache the results
+        if (documents.size()==2){
+
+            if (docs.isEmpty()){
+                bluewave.app.DocumentComparison dc = new bluewave.app.DocumentComparison();
+                dc.setA(documents.get(0));
+                dc.setB(documents.get(1));
+                docs.add(dc);
+            }
+
+            for (bluewave.app.DocumentComparison dc : docs){
+                dc.setInfo(result);
+                dc.save();
+            }
         }
-        catch(Exception e){
-            throw e;
-        }
+
+
+        return result;
     }
 
 
