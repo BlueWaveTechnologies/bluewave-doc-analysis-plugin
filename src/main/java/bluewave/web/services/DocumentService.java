@@ -1,5 +1,6 @@
 package bluewave.web.services;
 import bluewave.Config;
+import bluewave.app.File;
 import bluewave.utils.FileIndex;
 import static bluewave.utils.Python.*;
 
@@ -1355,5 +1356,74 @@ public class DocumentService extends WebService {
             }
         }
 
+    }
+    
+    final static ConcurrentHashMap<String, JSONObject> staticScripts = new ConcurrentHashMap<>();
+    
+    public static void getSimilarity(String[] documentIDs, Database database) {
+        
+      //Get python script
+        String scriptName = "compare_pdfs.py";
+        javaxt.io.File[] scripts = getScripts(scriptName);
+        if (scripts.length==0) return;
+        javaxt.io.File script = scripts[0];
+
+        
+      //Get script verion
+        String scriptVersion = null;
+        long lastModified = script.getDate().getTime();
+        synchronized(staticScripts){
+            try{
+                JSONObject info = staticScripts.get(script.getName());
+                if (info==null){
+                    info = new JSONObject();
+                    info.set("lastModified", lastModified);
+                    info.set("version", getScriptVersion(script));
+                    staticScripts.put(scriptName, info);
+                }
+                else{
+                    if (lastModified>info.get("lastModified").toLong()){
+                        info.set("lastModified", lastModified);
+                        info.set("version", getScriptVersion(script));
+                    }
+                }
+
+                scriptVersion = info.get("version").toString();
+            }
+            catch(Exception e){
+                //Failed to get version
+            }
+            staticScripts.notifyAll();
+        }
+
+      //Generate list of files and documents
+        ArrayList<javaxt.io.File> files = new ArrayList<>();
+        ArrayList<bluewave.app.Document> documents = new ArrayList<>();
+        for (String str : documentIDs){
+            try{
+                files.add(new javaxt.io.File(str));
+            }
+            catch(Exception e){
+                e.printStackTrace();
+                return;
+            }
+        }
+        if (files.size()<2) return ;
+
+      //Compile command line options
+        ArrayList<String> params = new ArrayList<>();
+        params.add("-f");
+        for (javaxt.io.File file : files){
+            params.add(file.toString());
+        }
+
+        try{
+
+          //Execute script
+            executeScript(script, params);
+            
+        }
+        catch(Exception e){
+        }
     }
 }
