@@ -44,7 +44,7 @@ public class DocumentService extends WebService {
 
     private ThreadPool pool;
     private FileIndex index;
-    private ConcurrentHashMap<String, JSONObject> scripts;
+    private static ConcurrentHashMap<String, JSONObject> scripts = new ConcurrentHashMap<>();
     private ConcurrentHashMap<Long, WebSocketListener> listeners;
     private static AtomicLong webSocketID;
 
@@ -108,8 +108,6 @@ public class DocumentService extends WebService {
         }).start();
 
 
-
-        scripts = new ConcurrentHashMap<>();
     }
 
 
@@ -931,24 +929,40 @@ public class DocumentService extends WebService {
             return new ServiceResponse(400, "At least 2 documents are required");
 
 
+        try{
+            JSONObject result = getSimilarity(documentIDs, database);
+            return new ServiceResponse(result);
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
+        }
+    }
+
+    
+  //**************************************************************************
+  //** getSimilarity
+  //**************************************************************************
+    public static JSONObject getSimilarity(String[] documentIDs, Database database)
+        throws Exception {
+
       //Get python script
         String scriptName = "compare_pdfs.py";
-        javaxt.io.File[] scripts = getScripts(scriptName);
-        if (scripts.length==0) return new ServiceResponse(500, "Script not found");
-        javaxt.io.File script = scripts[0];
+        javaxt.io.File[] pyFiles = getScripts(scriptName);
+        if (pyFiles.length==0) throw new Exception("Script not found");
+        javaxt.io.File script = pyFiles[0];
 
 
       //Get script verion
         String scriptVersion = null;
         long lastModified = script.getDate().getTime();
-        synchronized(this.scripts){
+        synchronized(scripts){
             try{
-                JSONObject info = this.scripts.get(script.getName());
+                JSONObject info = scripts.get(script.getName());
                 if (info==null){
                     info = new JSONObject();
                     info.set("lastModified", lastModified);
                     info.set("version", getScriptVersion(script));
-                    this.scripts.put(scriptName, info);
+                    scripts.put(scriptName, info);
                 }
                 else{
                     if (lastModified>info.get("lastModified").toLong()){
@@ -962,7 +976,7 @@ public class DocumentService extends WebService {
             catch(Exception e){
                 //Failed to get version
             }
-            this.scripts.notifyAll();
+            scripts.notifyAll();
         }
 
 
@@ -1003,7 +1017,7 @@ public class DocumentService extends WebService {
                         String version = result.get("version").toString();
                         if (version!=null){
                             if (version.equals(scriptVersion)){
-                                return new ServiceResponse(result);
+                                return result;
                             }
                         }
                     }
@@ -1018,7 +1032,7 @@ public class DocumentService extends WebService {
             }
             catch(Exception e) {
                 if(conn!=null) conn.close();
-                return new ServiceResponse(e);
+                throw e;
             }
         }
 
@@ -1037,10 +1051,10 @@ public class DocumentService extends WebService {
                 documents.add(document);
             }
             catch(Exception e){
-                return new ServiceResponse(e);
+                throw e;
             }
         }
-        if (files.size()<2) return new ServiceResponse(400, "At least 2 documents are required");
+        if (files.size()<2) throw new Exception("At least 2 documents are required");
 
 
 
@@ -1099,10 +1113,10 @@ public class DocumentService extends WebService {
 
 
           //Return response
-            return new ServiceResponse(result);
+            return result;
         }
         catch(Exception e){
-            return new ServiceResponse(e);
+            throw e;
         }
     }
 
@@ -1357,29 +1371,29 @@ public class DocumentService extends WebService {
         }
 
     }
-    
-    final static ConcurrentHashMap<String, JSONObject> staticScripts = new ConcurrentHashMap<>();
-    
-    public static void getSimilarity(String[] documentIDs, Database database) {
-        
+
+
+
+    public static void getSimilarity2(String[] documentIDs, Database database) {
+
       //Get python script
         String scriptName = "compare_pdfs.py";
-        javaxt.io.File[] scripts = getScripts(scriptName);
-        if (scripts.length==0) return;
-        javaxt.io.File script = scripts[0];
+        javaxt.io.File[] pyFiles = getScripts(scriptName);
+        if (pyFiles.length==0) return;
+        javaxt.io.File script = pyFiles[0];
 
-        
+
       //Get script verion
         String scriptVersion = null;
         long lastModified = script.getDate().getTime();
-        synchronized(staticScripts){
+        synchronized(scripts){
             try{
-                JSONObject info = staticScripts.get(script.getName());
+                JSONObject info = scripts.get(script.getName());
                 if (info==null){
                     info = new JSONObject();
                     info.set("lastModified", lastModified);
                     info.set("version", getScriptVersion(script));
-                    staticScripts.put(scriptName, info);
+                    scripts.put(scriptName, info);
                 }
                 else{
                     if (lastModified>info.get("lastModified").toLong()){
@@ -1393,7 +1407,7 @@ public class DocumentService extends WebService {
             catch(Exception e){
                 //Failed to get version
             }
-            staticScripts.notifyAll();
+            scripts.notifyAll();
         }
 
       //Generate list of files and documents
@@ -1421,7 +1435,7 @@ public class DocumentService extends WebService {
 
           //Execute script
             executeScript(script, params);
-            
+
         }
         catch(Exception e){
         }
