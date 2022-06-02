@@ -21,12 +21,12 @@ public class BulkCompare {
     /**
      * Example:
      * java -jar target/bluewave-dev.jar -config config.json -compare Compare -threads 4 -dir "/Users/share/docs"
-     * 
+     *
      * @param args HashMap of values, '-threads' & '-dir'
      *  args must have 2 keys
      *      -threads -  the number of threads in pool
      *      -dir -  documents storage directory
-     * 
+     *
      */
     public static void compare(HashMap<String, String> args) {
         int threadsNum = -1;
@@ -43,7 +43,7 @@ public class BulkCompare {
             p("params needed: -threads & -dir");
             return;
         }
-        
+
         final Directory documentDirectory = new Directory(dir);
         List<String> documents = getDocumentListSorted(documentDirectory);
         int n = documents.size();
@@ -61,7 +61,7 @@ public class BulkCompare {
             public void process(Object obj) {
                 try {
                     String[] docs = (String[]) obj;
-                    DocumentService.getSimilarity(
+                    DocumentService.getSimilarity2(
                             docs,
                             Config.getDatabase());
 
@@ -86,10 +86,10 @@ public class BulkCompare {
         try {
             pool.join();
             statusLogger.shutdown();
-        } catch (Exception e) {             
+        } catch (Exception e) {
             e.printStackTrace();
         }
-        
+
         LocalTime end = LocalTime.now();
         long hours = ChronoUnit.HOURS.between(start, end);
         long minutes = ChronoUnit.MINUTES.between(start, end) % 60;
