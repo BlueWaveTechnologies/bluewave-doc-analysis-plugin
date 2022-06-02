@@ -40,6 +40,7 @@
 
   <main>
     <test arg="Document" class="bluewave.utils.FileIndex" method="test"/>
+    <compare arg="Compare" class="bluewave.test.BulkCompare" method="compare"/>
   </main>
 
 </plugin>
