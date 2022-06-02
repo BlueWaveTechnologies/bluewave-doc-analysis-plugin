@@ -66,10 +66,21 @@ def main(suspicious_pairs):
         # take avg
         importance = 0.5*(ml_importance_100 + calc_importance)
 
+        # SPECIAL RULES
         # Special rule for tables with lots of zeros
         n_zeros = txt.count('0')
         if n_zeros / (n_zeros + deci_count + 1) > 0.90:
-            importance = importance - 45
+            importance = importance - 46
+
+        # Special rule for consecutive numbers
+        consec = [
+            '1234567',
+            '1011121314',
+            '100100110021003',
+            '1001100210031004',
+        ]
+        if any(s in sus for s in consec):
+            importance = importance - 46
 
         # to int
         importance = int(round(importance))
