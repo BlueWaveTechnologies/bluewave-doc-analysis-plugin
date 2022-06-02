@@ -3,13 +3,14 @@
 The document analysis module is used to detect similarities within the PDF documents. This capability is used by analysis to identify potentially fraudulent documents where data tables, images, and text have been plagiarized. Users perform their analysis via a custom web interface where they can search for documents, run pairwise comparisons, and review suspicious document pairs. Under the hood, the document analysis module uses lucene for document search and a custom python script to perform analysis. 
 
 ## Maven Quickstart
-1. Build the plugin
+1. Build bluewave
+2. Build the plugin
 ```console
-git clone https://github.com/BlueWaveTechnologies/bluewave-doc-analysis-plugin.git
-cd bluewave-doc-analysis-plugin
-mvn install
+   git clone https://github.com/BlueWaveTechnologies/bluewave-doc-analysis-plugin.git
+   cd bluewave-doc-analysis-plugin
+   mvn install
 ```
-2. Copy the `dist` directory into the bluewave plugins folder
+3. Copy the `dist` directory into the bluewave plugins folder (see `pluginDir` config in your bluewave project). Alternatively, update the `pluginDir` config in your bluewave project to point to the `dist` directory in this project folder.
 
 
 
