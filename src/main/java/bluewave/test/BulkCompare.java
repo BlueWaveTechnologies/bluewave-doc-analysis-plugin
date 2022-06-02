@@ -28,7 +28,10 @@ public class BulkCompare {
      *      -dir -  documents storage directory
      *
      */
-    public static void compare(HashMap<String, String> args) {
+    public static void compare(HashMap<String, String> args) throws Exception {
+
+        Config.initDatabase();
+
         int threadsNum = -1;
         String dir = null;
         try {
