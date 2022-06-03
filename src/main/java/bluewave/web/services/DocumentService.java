@@ -1113,7 +1113,7 @@ public class DocumentService extends WebService {
         return result;
     }
     
-    public static JSONObject getSimilarityDocumentIdsForAbsolutePathFiles(String[] documents, Database database) {
+    public static List<String> getOrCreateDocumentIds(String[] documents, Database database) {
         List<bluewave.app.File> files = new ArrayList<>();
         for(String doc: documents) 
            files.add(getOrCreateFile(
@@ -1129,13 +1129,7 @@ public class DocumentService extends WebService {
         for(bluewave.app.Document tempDoc : bDocs)
             docIds.add(tempDoc.getID().toString());
         
-        String[]documentIds = new String[]{};
-        try{
-            getSimilarity(docIds.toArray(documentIds), database);
-        }catch(Exception e) {
-            e.printStackTrace();
-        }
-        return null;
+        return docIds;
     }
 
   //**************************************************************************
@@ -1387,74 +1381,5 @@ public class DocumentService extends WebService {
             }
         }
 
-    }
-
-
-
-    public static void getSimilarity2(String[] documentIDs, Database database) {
-
-      //Get python script
-        String scriptName = "compare_pdfs.py";
-        javaxt.io.File[] pyFiles = getScripts(scriptName);
-        if (pyFiles.length==0) return;
-        javaxt.io.File script = pyFiles[0];
-
-
-      //Get script verion
-        String scriptVersion = null;
-        long lastModified = script.getDate().getTime();
-        synchronized(scripts){
-            try{
-                JSONObject info = scripts.get(script.getName());
-                if (info==null){
-                    info = new JSONObject();
-                    info.set("lastModified", lastModified);
-                    info.set("version", getScriptVersion(script));
-                    scripts.put(scriptName, info);
-                }
-                else{
-                    if (lastModified>info.get("lastModified").toLong()){
-                        info.set("lastModified", lastModified);
-                        info.set("version", getScriptVersion(script));
-                    }
-                }
-
-                scriptVersion = info.get("version").toString();
-            }
-            catch(Exception e){
-                //Failed to get version
-            }
-            scripts.notifyAll();
-        }
-
-      //Generate list of files and documents
-        ArrayList<javaxt.io.File> files = new ArrayList<>();
-        ArrayList<bluewave.app.Document> documents = new ArrayList<>();
-        for (String str : documentIDs){
-            try{
-                files.add(new javaxt.io.File(str));
-            }
-            catch(Exception e){
-                e.printStackTrace();
-                return;
-            }
-        }
-        if (files.size()<2) return ;
-
-      //Compile command line options
-        ArrayList<String> params = new ArrayList<>();
-        params.add("-f");
-        for (javaxt.io.File file : files){
-            params.add(file.toString());
-        }
-
-        try{
-
-          //Execute script
-            executeScript(script, params);
-
-        }
-        catch(Exception e){
-        }
     }
 }

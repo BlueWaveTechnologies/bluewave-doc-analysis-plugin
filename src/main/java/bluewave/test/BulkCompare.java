@@ -41,6 +41,16 @@ public class BulkCompare {
         for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find()) {
             dc.delete();
         }
+        
+//        //Delete records from APPLICATION.DOCUMENT
+//        for (bluewave.app.Document d : bluewave.app.Document.find()) {
+//            d.delete();
+//        }
+//        
+//        //Delete records from APPLICATION.File
+//        for (bluewave.app.File f : bluewave.app.File.find()) {
+//            f.delete();
+//        }
 
         //Delete json sidecar files
         final Directory documentDirectory = new Directory(dir);
@@ -52,6 +62,8 @@ public class BulkCompare {
                 file.delete();
             }
         }
+        
+//        if(true) return;
         
         //Run comparison
         compare(args);
@@ -87,15 +99,21 @@ public class BulkCompare {
 
         final Directory documentDirectory = new Directory(dir);
         List<String> documents = getDocumentListSorted(documentDirectory);
-
-        int n = documents.size();
+        
+        
+        // Create docIds i.e., bluewave.app.Document
+        List<String>docIds = DocumentService.getOrCreateDocumentIds(
+                documents.toArray(new String[]{}), Config.getDatabase());
+        
+        
+        int n = docIds.size();
         long proposedNumComparisons = ((n * n) - n) / 2;
 
         AtomicLong docCounter = new AtomicLong(0);
         StatusLogger statusLogger = new StatusLogger(docCounter, new AtomicLong(proposedNumComparisons));
 
         List<String> reversed = new ArrayList<>();
-        reversed.addAll(documents);
+        reversed.addAll(docIds);
         Collections.reverse(reversed);
 
         LocalTime start = LocalTime.now();
@@ -103,7 +121,7 @@ public class BulkCompare {
             public void process(Object obj) {
                 try {
                     String[] docs = (String[]) obj;
-                    DocumentService.getSimilarityDocumentIdsForAbsolutePathFiles(
+                    DocumentService.getSimilarity(
                             docs,
                             Config.getDatabase());
 
@@ -115,7 +133,7 @@ public class BulkCompare {
         }.start();
 
         int comparisons = 0;
-        for (String itemA : documents) {
+        for (String itemA : docIds) {
             reversed.remove(reversed.size() - 1);
             for (String itemZ : reversed) {
                 comparisons++;
@@ -137,7 +155,7 @@ public class BulkCompare {
         long minutes = ChronoUnit.MINUTES.between(start, end) % 60;
         long seconds = ChronoUnit.SECONDS.between(start, end) % 60;
         p("\n");
-        p("Total Documents Processed: " + documents.size());
+        p("Total Documents Processed: " + docIds.size());
         p("Total Comparisons: " + comparisons);
         p("Total Time Elapsed: " + hours + " hours " + minutes
                 + " minutes " + seconds + " seconds.");
