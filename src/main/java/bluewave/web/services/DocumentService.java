@@ -21,13 +21,13 @@ import javaxt.http.servlet.FormValue;
 import javaxt.http.websocket.WebSocketListener;
 import javaxt.utils.ThreadPool;
 import javaxt.express.*;
+import javaxt.io.Directory;
 import javaxt.sql.*;
 import javaxt.json.*;
 
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
-import org.apache.pdfbox.io.MemoryUsageSetting;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 
 
@@ -1112,7 +1112,31 @@ public class DocumentService extends WebService {
 
         return result;
     }
-
+    
+    public static JSONObject getSimilarityDocumentIdsForAbsolutePathFiles(String[] documents, Database database) {
+        List<bluewave.app.File> files = new ArrayList<>();
+        for(String doc: documents) 
+           files.add(getOrCreateFile(
+                    new javaxt.io.File(doc),
+                    getOrCreatePath(
+                            new Directory(new javaxt.io.File(doc).getPath()))));
+            
+        List<bluewave.app.Document> bDocs = new ArrayList<>();
+        for(File file: files)
+            bDocs.add(getOrCreateDocument(file));
+        
+        List<String> docIds = new ArrayList<>();
+        for(bluewave.app.Document tempDoc : bDocs)
+            docIds.add(tempDoc.getID().toString());
+        
+        String[]documentIds = new String[]{};
+        try{
+            getSimilarity(docIds.toArray(documentIds), database);
+        }catch(Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
   //**************************************************************************
   //** getFile
@@ -1152,7 +1176,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getOrCreatePath
   //**************************************************************************
-    private bluewave.app.Path getOrCreatePath(javaxt.io.Directory dir){
+    private static bluewave.app.Path getOrCreatePath(javaxt.io.Directory dir){
         String p = dir.toString();
 
         try{
@@ -1178,7 +1202,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getOrCreateFile
   //**************************************************************************
-    private bluewave.app.File getOrCreateFile(javaxt.io.File file, bluewave.app.Path path){
+    private static bluewave.app.File getOrCreateFile(javaxt.io.File file, bluewave.app.Path path){
         try{
             return bluewave.app.File.find(
                 "name=", file.getName(),
@@ -1208,7 +1232,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getOrCreateDocument
   //**************************************************************************
-    private bluewave.app.Document getOrCreateDocument(bluewave.app.File f){
+    private static bluewave.app.Document getOrCreateDocument(bluewave.app.File f){
 
         try{
             return bluewave.app.Document.find(

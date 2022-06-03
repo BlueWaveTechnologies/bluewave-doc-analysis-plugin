@@ -1,6 +1,7 @@
 package bluewave.test;
 
 import bluewave.Config;
+import bluewave.app.DocumentComparison;
 import bluewave.utils.StatusLogger;
 import bluewave.web.services.DocumentService;
 import java.time.LocalTime;
@@ -18,14 +19,51 @@ import javaxt.utils.ThreadPool;
 
 public class BulkCompare {
 
+    public static void benchmark(HashMap<String, String> args) throws Exception {
+        Config.initDatabase();
+
+        int threadsNum = -1;
+        String dir = null;
+        try {
+            threadsNum = Integer.parseInt(args.get("-threads"));
+            dir = args.get("-dir");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
+
+        if (threadsNum == -1 || dir == null) {
+            p("params needed: -threads & -dir");
+            return;
+        }
+
+        //Delete records from APPLICATION.DOCUMENT_COMPARISON
+        for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find()) {
+            dc.delete();
+        }
+
+        //Delete json sidecar files
+        final Directory documentDirectory = new Directory(dir);
+        List<Object> docs = documentDirectory.getChildren(true, "*.jsoncached");
+        File file = null;
+        for (Object obj : docs) {
+            if (obj instanceof File) {
+                file = (File) obj;
+                file.delete();
+            }
+        }
+        
+        //Run comparison
+        compare(args);
+    }
+
     /**
-     * Example:
-     * java -jar target/bluewave-dev.jar -config config.json -compare Compare -threads 4 -dir "/Users/share/docs"
+     * Example: java -jar target/bluewave-dev.jar -config config.json -compare
+     * Compare -threads 4 -dir "/Users/share/docs"
      *
-     * @param args HashMap of values, '-threads' & '-dir'
-     *  args must have 2 keys
-     *      -threads -  the number of threads in pool
-     *      -dir -  documents storage directory
+     * @param args HashMap of values, '-threads' & '-dir' args must have 2 keys
+     * -threads - the number of threads in pool; -dir - documents storage
+     * directory;
      *
      */
     public static void compare(HashMap<String, String> args) throws Exception {
@@ -49,6 +87,7 @@ public class BulkCompare {
 
         final Directory documentDirectory = new Directory(dir);
         List<String> documents = getDocumentListSorted(documentDirectory);
+
         int n = documents.size();
         long proposedNumComparisons = ((n * n) - n) / 2;
 
@@ -64,7 +103,7 @@ public class BulkCompare {
             public void process(Object obj) {
                 try {
                     String[] docs = (String[]) obj;
-                    DocumentService.getSimilarity2(
+                    DocumentService.getSimilarityDocumentIdsForAbsolutePathFiles(
                             docs,
                             Config.getDatabase());
 
