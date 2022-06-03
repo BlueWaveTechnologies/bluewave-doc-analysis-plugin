@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import javaxt.io.Directory;
 import javaxt.io.File;
+import javaxt.sql.Database;
 import static javaxt.utils.Console.*;
 import javaxt.utils.ThreadPool;
 
@@ -41,12 +42,12 @@ public class BulkCompare {
         for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find()) {
             dc.delete();
         }
-        
+
 //        //Delete records from APPLICATION.DOCUMENT
 //        for (bluewave.app.Document d : bluewave.app.Document.find()) {
 //            d.delete();
 //        }
-//        
+//
 //        //Delete records from APPLICATION.File
 //        for (bluewave.app.File f : bluewave.app.File.find()) {
 //            f.delete();
@@ -62,9 +63,9 @@ public class BulkCompare {
                 file.delete();
             }
         }
-        
+
 //        if(true) return;
-        
+
         //Run comparison
         compare(args);
     }
@@ -99,13 +100,13 @@ public class BulkCompare {
 
         final Directory documentDirectory = new Directory(dir);
         List<String> documents = getDocumentListSorted(documentDirectory);
-        
-        
+
+
         // Create docIds i.e., bluewave.app.Document
-        List<String>docIds = DocumentService.getOrCreateDocumentIds(
+        List<String>docIds = getOrCreateDocumentIds(
                 documents.toArray(new String[]{}), Config.getDatabase());
-        
-        
+
+
         int n = docIds.size();
         long proposedNumComparisons = ((n * n) - n) / 2;
 
@@ -181,4 +182,24 @@ public class BulkCompare {
     static void p(String text) {
         console.log(text);
     }
+
+    private static List<String> getOrCreateDocumentIds(String[] documents, Database database) {
+        List<bluewave.app.File> files = new ArrayList<>();
+        for(String doc: documents)
+           files.add(DocumentService.getOrCreateFile(
+                    new javaxt.io.File(doc),
+                    DocumentService.getOrCreatePath(
+                            new Directory(new javaxt.io.File(doc).getPath()))));
+
+        List<bluewave.app.Document> bDocs = new ArrayList<>();
+        for(bluewave.app.File file: files)
+            bDocs.add(DocumentService.getOrCreateDocument(file));
+
+        List<String> docIds = new ArrayList<>();
+        for(bluewave.app.Document tempDoc : bDocs)
+            docIds.add(tempDoc.getID().toString());
+
+        return docIds;
+    }
+
 }

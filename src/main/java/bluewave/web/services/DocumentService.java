@@ -1112,25 +1112,7 @@ public class DocumentService extends WebService {
 
         return result;
     }
-    
-    public static List<String> getOrCreateDocumentIds(String[] documents, Database database) {
-        List<bluewave.app.File> files = new ArrayList<>();
-        for(String doc: documents) 
-           files.add(getOrCreateFile(
-                    new javaxt.io.File(doc),
-                    getOrCreatePath(
-                            new Directory(new javaxt.io.File(doc).getPath()))));
-            
-        List<bluewave.app.Document> bDocs = new ArrayList<>();
-        for(File file: files)
-            bDocs.add(getOrCreateDocument(file));
-        
-        List<String> docIds = new ArrayList<>();
-        for(bluewave.app.Document tempDoc : bDocs)
-            docIds.add(tempDoc.getID().toString());
-        
-        return docIds;
-    }
+
 
   //**************************************************************************
   //** getFile
@@ -1170,7 +1152,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getOrCreatePath
   //**************************************************************************
-    private static bluewave.app.Path getOrCreatePath(javaxt.io.Directory dir){
+    public static bluewave.app.Path getOrCreatePath(javaxt.io.Directory dir){
         String p = dir.toString();
 
         try{
@@ -1196,7 +1178,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getOrCreateFile
   //**************************************************************************
-    private static bluewave.app.File getOrCreateFile(javaxt.io.File file, bluewave.app.Path path){
+    public static bluewave.app.File getOrCreateFile(javaxt.io.File file, bluewave.app.Path path){
         try{
             return bluewave.app.File.find(
                 "name=", file.getName(),
@@ -1226,7 +1208,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getOrCreateDocument
   //**************************************************************************
-    private static bluewave.app.Document getOrCreateDocument(bluewave.app.File f){
+    public static bluewave.app.Document getOrCreateDocument(bluewave.app.File f){
 
         try{
             return bluewave.app.Document.find(
