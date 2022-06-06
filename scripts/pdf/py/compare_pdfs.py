@@ -160,6 +160,11 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
 
     suspicious_pairs = []
 
+    page_analysis_sec = 0
+    digit_analysis_sec = 0
+    text_analysis_sec = 0
+    image_analysis_sec = 0
+    total_analysis_t0 = time.time()
     for i in range(len(filenames)-1):
         for j in range(i+1, len(filenames)):
             # i always less than j
@@ -182,7 +187,7 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
             else:
                 a_new = a
                 b_new = b
-            page_analysis_sec = time.time() - page_analysis_sec_t0
+            page_analysis_sec += time.time() - page_analysis_sec_t0
 
             # Compare numbers
             digit_analysis_sec_t0 = time.time()
@@ -196,7 +201,7 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
                     comparison_type_name='Common digit sequence',
                 )
                 suspicious_pairs.extend(digit_results)
-            digit_analysis_sec = time.time() - digit_analysis_sec_t0
+            digit_analysis_sec += time.time() - digit_analysis_sec_t0
 
             # Compare texts
             text_analysis_sec_t0 = time.time()
@@ -210,7 +215,7 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
                     comparison_type_name='Common text string',
                 )
                 suspicious_pairs.extend(text_results)
-            text_analysis_sec = time.time() - text_analysis_sec_t0
+            text_analysis_sec += time.time() - text_analysis_sec_t0
 
             # Compare images
             image_analysis_sec_t0 = time.time()
@@ -241,7 +246,8 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
                             ]
                         }
                         suspicious_pairs.append(sus_result)
-            image_analysis_sec = time.time() - image_analysis_sec_t0
+            image_analysis_sec += time.time() - image_analysis_sec_t0
+        total_analysis_sec = time.time() - total_analysis_t0
 
     # Remove duplicate suspicious pairs (this might happen if a page has
     # multiple common substrings with another page)
@@ -257,7 +263,7 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
     if verbose: print('Gathering output...')
     if verbose: print('\tAdd importance scores...')
     suspicious_pairs = importance_score.main(suspicious_pairs)
-    importance_scoring_sec_t0 = time.time()
+    importance_scoring_sec = time.time() - importance_scoring_sec_t0
     
     post_processing_sec_t0 = time.time()
     if verbose: print('\tGet file info...')
