@@ -145,7 +145,9 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
     t0 = time.time()
 
     if verbose: print('Reading files...')
+    read_pdf_sec_t0 = time.time()
     file_data = get_file_data.main(filenames, regen_cache, version=VERSION)
+    read_pdf_sec = time.time() - read_pdf_sec_t0
     if sidecar_only:
         return
 
@@ -165,6 +167,7 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
             b = file_data[j]
 
             # Find duplicate pages and remove those from the analysis
+            page_analysis_sec_t0 = time.time()
             if 'pages' in methods:
                 if verbose: print('Finding duplicate pages...')
                 duplicate_pages = pdf_duplicate_pages.find_duplicate_pages(
@@ -179,8 +182,10 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
             else:
                 a_new = a
                 b_new = b
+            page_analysis_sec = time.time() - page_analysis_sec_t0
 
             # Compare numbers
+            digit_analysis_sec_t0 = time.time()
             if 'digits' in methods:
                 if verbose: print('Comparing digits...')
                 digit_results = compare_pdfs_text.main(
@@ -191,8 +196,10 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
                     comparison_type_name='Common digit sequence',
                 )
                 suspicious_pairs.extend(digit_results)
+            digit_analysis_sec = time.time() - digit_analysis_sec_t0
 
             # Compare texts
+            text_analysis_sec_t0 = time.time()
             if 'text' in methods:
                 if verbose: print('Comparing texts...')
                 text_results = compare_pdfs_text.main(
@@ -203,8 +210,10 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
                     comparison_type_name='Common text string',
                 )
                 suspicious_pairs.extend(text_results)
+            text_analysis_sec = time.time() - text_analysis_sec_t0
 
             # Compare images
+            image_analysis_sec_t0 = time.time()
             if 'images' in methods:
                 if verbose: print('Comparing images...')
                 identical_images = compare_images(
@@ -232,6 +241,7 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
                             ]
                         }
                         suspicious_pairs.append(sus_result)
+            image_analysis_sec = time.time() - image_analysis_sec_t0
 
     # Remove duplicate suspicious pairs (this might happen if a page has
     # multiple common substrings with another page)
@@ -243,9 +253,13 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
     # suspicious_pairs = filter_sus_pairs(suspicious_pairs)
 
     # Calculate some more things for the final output
+    importance_scoring_sec_t0 = time.time()
     if verbose: print('Gathering output...')
     if verbose: print('\tAdd importance scores...')
     suspicious_pairs = importance_score.main(suspicious_pairs)
+    importance_scoring_sec_t0 = time.time()
+    
+    post_processing_sec_t0 = time.time()
     if verbose: print('\tGet file info...')
     file_info = get_file_info(file_data, suspicious_pairs)
     if verbose: print('\tGet total pages...')
@@ -255,6 +269,7 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
     if verbose: print('\tGet version...')
     version = get_version()
     if verbose: print('\tResults gathered.')
+    post_processing_sec = time.time() - post_processing_sec_t0
 
     dt = time.time() - t0
     if dt == 0:
@@ -266,7 +281,16 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
         'files': file_info,
         'suspicious_pairs': suspicious_pairs,
         'num_suspicious_pairs': len(suspicious_pairs),
-        'elapsed_time_sec': dt,
+        'elapsed_time_sec': {
+            'read_pdf': read_pdf_sec,
+            'page_analysis': page_analysis_sec,
+            'text_analysis': text_analysis_sec,
+            'digit_analysis': digit_analysis_sec,
+            'image_analysis': image_analysis_sec,
+            'total_analysis': total_analysis_sec,
+            'importance_scoring': importance_scoring_sec,
+            'post_processing': post_processing_sec,
+            'total_sec': dt},
         'pages_per_second': pages_per_second,
         'similarity_scores': similarity_scores,
         'version': version,
