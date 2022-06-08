@@ -28,6 +28,7 @@ import javaxt.sql.Database;
 import javaxt.sql.Model;
 import static javaxt.utils.Console.*;
 import javaxt.utils.ThreadPool;
+import bluewave.Main;
 
 public class BulkCompare {
 
@@ -283,7 +284,12 @@ public class BulkCompare {
                 stmt.execute("SELECT count(*) FROM information_schema.tables WHERE table_name = 'APPLICATION.DOCUMENT_COMPARISON_TEST'");
                 ResultSet result = stmt.getResultSet();
                 while (result.next()) {
-                    exists = true;
+                    if(result.getString(1).equals("0")) {
+                        exists = false;
+                    } else {
+                        exists = true;
+                    }
+                    p(result.getString(1));
                 }
                 stmt.close();
                 conn.close();
@@ -311,7 +317,7 @@ public class BulkCompare {
                 while ((line = br.readLine()) != null) {
                     sb.append(line + System.lineSeparator());
                 }
-                p(sb.toString());
+//                p(sb.toString());
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -401,7 +407,7 @@ public class BulkCompare {
         database.initConnectionPool();
 
         //Initialize models
-        javaxt.io.Jar jar = new Jar(BulkCompare.class);
+        javaxt.io.Jar jar = new Jar(bluewave.test.BulkCompare.class);
         Model.init(jar, database.getConnectionPool());
     }
 }
