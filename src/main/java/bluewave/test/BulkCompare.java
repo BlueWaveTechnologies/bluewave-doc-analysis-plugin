@@ -9,7 +9,6 @@ import bluewave.web.services.DocumentService;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.sql.ResultSet;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -25,7 +24,6 @@ import javaxt.io.Jar;
 import javaxt.json.JSONObject;
 import javaxt.sql.Connection;
 import javaxt.sql.Database;
-import javaxt.sql.Model;
 import static javaxt.utils.Console.*;
 import javaxt.utils.ThreadPool;
 import java.sql.SQLException;
@@ -40,8 +38,6 @@ public class BulkCompare {
 
         // Check if should update schema
         updateSchema(Config.getDatabase());
-
-        updateModel(Config.getDatabase());
 
         int threadsNum = -1;
         String dir = null;
@@ -334,42 +330,27 @@ public class BulkCompare {
         return s.substring(0, i + 1);
     }
 
-    private static void updateSchema(Database database) {
+    private static void updateSchema(Database database) throws Exception {
 
         Connection conn = null;
-        Boolean exists = false;
         try {
             conn = database.getConnection();
-            try ( java.sql.Statement stmt = conn.getConnection().createStatement()) {
-                stmt.execute("SELECT count(*) FROM information_schema.tables WHERE table_name = 'APPLICATION.DOCUMENT_COMPARISON_TEST'");
-                ResultSet result = stmt.getResultSet();
-                while (result.next()) {
-                    if(result.getString(1).equals("0")) {
-                        exists = false;
-                    } else {
-                        exists = true;
-                    }
-                    p(result.getString(1));
-                }
-                stmt.close();
-                conn.close();
-            } catch (java.sql.SQLException e) {
-                e.printStackTrace();
-            } finally {
-                if (conn != null) {
-                    conn.close();
+            
+            Boolean exists = false;
+            for (javaxt.sql.Table table : Database.getTables(conn)){
+                String tableName = table.getName().toUpperCase();
+                if (tableName.endsWith("DOCUMENT_COMPARISON_STATS")){
+                    exists = true;
+                    break;
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 
-        if (!exists) {
-            p("Schema additions do not exist, updating ..");
-            // Get updates from file
-            StringBuilder sb = new StringBuilder();
-            try ( InputStream in
-                    = BulkCompare.class.getResourceAsStream("/benchmark.sql")) {
+
+            if (!exists) {
+                p("Schema additions do not exist, updating ..");
+                // Get updates from file
+                StringBuilder sb = new StringBuilder();
+                InputStream in = BulkCompare.class.getResourceAsStream("/benchmark.sql");
 
                 BufferedReader br = new BufferedReader(new InputStreamReader(in));
 
@@ -377,53 +358,40 @@ public class BulkCompare {
                 while ((line = br.readLine()) != null) {
                     sb.append(line + System.lineSeparator());
                 }
-//                p(sb.toString());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
 
-            //Split updates into individual statements
-            ArrayList<String> statements = new ArrayList<String>();
-            for (String s : sb.toString().split(";")) {
 
-                StringBuffer str = new StringBuffer();
-                for (String i : s.split("\r\n")) {
-                    if (!i.trim().startsWith("--") && !i.trim().startsWith("COMMENT ")) {
-                        str.append(i + "\r\n");
+                //Split updates into individual statements
+                ArrayList<String> statements = new ArrayList<String>();
+                for (String s : sb.toString().split(";")) {
+
+                    StringBuffer str = new StringBuffer();
+                    for (String i : s.split("\r\n")) {
+                        if (!i.trim().startsWith("--") && !i.trim().startsWith("COMMENT ")) {
+                            str.append(i + "\r\n");
+                        }
+                    }
+
+                    String cmd = str.toString().trim();
+                    if (cmd.length() > 0) {
+                        statements.add(rtrim(str.toString()) + ";");
                     }
                 }
 
-                String cmd = str.toString().trim();
-                if (cmd.length() > 0) {
-                    statements.add(rtrim(str.toString()) + ";");
+                // Update database schema
+                java.sql.Statement stmt = conn.getConnection().createStatement();
+                for (String cmd : statements) {
+                    stmt.execute(cmd);
                 }
-            }
-
-            // Update database schema
-            try {
-                conn = database.getConnection();
-                try {
-                    java.sql.Statement stmt = conn.getConnection().createStatement();
-                    for (String cmd : statements) {
-                        stmt.execute(cmd);
-                    }
-                    p("Schema updated.");
-                    stmt.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    if (conn != null) {
-                        conn.close();
-                    }
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else {
-            p("Schema additions already exist.");
+                p("Schema updated.");
+                stmt.close();
+            } 
+            
+            conn.close();
+        } 
+        catch (Exception e) {
+            if (conn!=null) conn.close();
+            throw e;
         }
-
     }
 
     private static String getScriptVersion() {
@@ -443,31 +411,5 @@ public class BulkCompare {
             }
         }
         return scriptVersion;
-    }
-
-    private static void updateModel(Database database) throws Exception {
-        StringBuilder sb = new StringBuilder();
-        try ( InputStream in
-                = BulkCompare.class.getResourceAsStream("/benchmark.sql")) {
-
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
-
-            String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line + System.lineSeparator());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        //Initialize schema (create tables, indexes, etc)
-        DbUtils.initSchema(database, sb.toString(), null);
-
-        //Inititalize connection pool
-        database.initConnectionPool();
-
-        //Initialize models
-        javaxt.io.Jar jar = new Jar(bluewave.test.BulkCompare.class);
-        Model.init(jar, database.getConnectionPool());
     }
 }
