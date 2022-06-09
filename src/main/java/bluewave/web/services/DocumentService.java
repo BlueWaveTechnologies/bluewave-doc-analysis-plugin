@@ -929,11 +929,15 @@ public class DocumentService extends WebService {
             return new ServiceResponse(400, "At least 2 documents are required");
 
       //Compare documents and return result
+        Connection conn = null;
         try{
-            JSONObject result = getSimilarity(documentIDs, database);
+            conn = database.getConnection();
+            JSONObject result = getSimilarity(documentIDs, conn);
+            conn.close();
             return new ServiceResponse(result);
         }
         catch(Exception e){
+            if (conn!=null) conn.close();
             return new ServiceResponse(e);
         }
     }
@@ -942,7 +946,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getSimilarity
   //**************************************************************************
-    public static JSONObject getSimilarity(String[] documentIDs, Database database)
+    public static JSONObject getSimilarity(String[] documentIDs, Connection conn)
         throws Exception {
 
       //Get python script
@@ -989,12 +993,12 @@ public class DocumentService extends WebService {
             "where (A_ID="+documentIDs[0]+" AND B_ID="+documentIDs[1]+") " +
                "OR (A_ID="+documentIDs[1]+" AND B_ID="+documentIDs[0]+")";
 
-            Connection conn = null;
+
             try {
 
               //Execute query
                 HashMap<Long, String> results = new HashMap<>();
-                conn = database.getConnection();
+
                 Recordset rs = new Recordset();
                 rs.open(cacheQuery, conn);
                 while (rs.hasNext()){
@@ -1004,7 +1008,7 @@ public class DocumentService extends WebService {
                     rs.moveNext();
                 }
                 rs.close();
-                conn.close();
+
 
 
               //Parse json and return results if appropriate
@@ -1031,7 +1035,6 @@ public class DocumentService extends WebService {
                 }
             }
             catch(Exception e) {
-                if(conn!=null) conn.close();
                 throw e;
             }
         }

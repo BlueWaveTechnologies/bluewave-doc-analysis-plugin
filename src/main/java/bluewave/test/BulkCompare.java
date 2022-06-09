@@ -28,7 +28,8 @@ import javaxt.sql.Database;
 import javaxt.sql.Model;
 import static javaxt.utils.Console.*;
 import javaxt.utils.ThreadPool;
-import bluewave.Main;
+import java.sql.SQLException;
+import javaxt.sql.Recordset;
 
 public class BulkCompare {
 
@@ -57,30 +58,27 @@ public class BulkCompare {
             return;
         }
 
-        //Delete records from APPLICATION.DOCUMENT_COMPARISON_STATS
-        for (bluewave.model.DocumentComparisonStats dc : bluewave.model.DocumentComparisonStats.find()) {
-            dc.delete();
+
+      //Clean up comparison tables
+        javaxt.sql.Connection conn = null;
+        try{
+            conn = Config.getDatabase().getConnection();
+            for (String table : new String[]{
+                "APPLICATION.DOCUMENT_COMPARISON_STATS",
+                "APPLICATION.DOCUMENT_COMPARISON_TEST",
+                "APPLICATION.DOCUMENT_COMPARISON"
+            }){
+                conn.execute("delete from " + table);
+            }
+            conn.close();
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+            e.printStackTrace();
         }
 
-        //Delete records from APPLICATION.DOCUMENT_COMPARISON_TEST
-        for (bluewave.model.DocumentComparisonTest dc : bluewave.model.DocumentComparisonTest.find()) {
-            dc.delete();
-        }
 
-        //Delete records from APPLICATION.DOCUMENT_COMPARISON
-        for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find()) {
-            dc.delete();
-        }
 
-//        //Delete records from APPLICATION.DOCUMENT
-//        for (bluewave.app.Document d : bluewave.app.Document.find()) {
-//            d.delete();
-//        }
-//
-//        //Delete records from APPLICATION.File
-//        for (bluewave.app.File f : bluewave.app.File.find()) {
-//            f.delete();
-//        }
         //Delete json sidecar files
         final Directory documentDirectory = new Directory(dir);
         List<Object> docs = documentDirectory.getChildren(true, "*.jsoncached");
@@ -146,34 +144,30 @@ public class BulkCompare {
         Collections.reverse(reversed);
 
         LocalTime start = LocalTime.now();
+
+
+      //Create thread pool used to run comparisons and record runtimes
         ThreadPool pool = new ThreadPool(threadsNum) {
             public void process(Object obj) {
+                Object[] arr = (Object[]) obj;
                 try {
-                    
+                    Long documentComparisonTestID = (Long) arr[0];
+                    String a = (String) arr[1];
+                    String b = (String) arr[2];
+
                     // Get Documents
-                    String[] docs = (String[]) obj;
+                    String[] docs = new String[]{a, b};
 
-                    javaxt.sql.Connection conn = Config.getDatabase().getConnection();
-                    javaxt.sql.Recordset rs = new javaxt.sql.Recordset();
-                    rs.open("SELECT * FROM APPLICATION.DOCUMENT_COMPARISON_TEST where id=-1", conn, false); //Set "ReadOnly" flag to false
-                    rs.addNew();
-                    rs.setValue("NUM_THREADS", threadsNum);
-                    rs.setValue("SCRIPT_VERSION", scriptVer);
-                    rs.setValue("HOST", host);
-                    rs.update();
 
-                    long documentComparisonTestID = rs.getGeneratedKey().toLong();
-                    rs.close();
-                    
+
                     LocalTime pairStartTime = LocalTime.now();
                     JSONObject result = DocumentService.getSimilarity(
-                            docs,
-                            Config.getDatabase());
+                            new String[]{a, b},
+                            getConnection());
                     LocalTime pairEndTime = LocalTime.now();
-                    
-                    rs = new javaxt.sql.Recordset();
-                    rs.open("SELECT * FROM APPLICATION.DOCUMENT_COMPARISON_STATS where id=-1", conn, false); //Set "ReadOnly" flag to false
-                    rs.setBatchSize(100);
+
+
+                    Recordset rs = getRecordset();
                     rs.addNew();
                     rs.setValue("TEST_ID", documentComparisonTestID);
                     rs.setValue("A_ID", docs[0]);
@@ -181,25 +175,91 @@ public class BulkCompare {
                     rs.setValue("T", ChronoUnit.SECONDS.between(pairStartTime, pairEndTime));
                     rs.setValue("A_SIZE", Document.get("id=",docs[0]).getFile().getSize());
                     rs.setValue("B_SIZE", Document.get("id=",docs[1]).getFile().getSize());
-                    rs.setValue("INFO", result);
+                    //rs.setValue("INFO", result);
                     rs.update();
-                    rs.close();
 
-                    conn.close();
 
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
                 docCounter.incrementAndGet();
             }
+
+            private Recordset getRecordset() throws SQLException{
+                Recordset rs = (Recordset) get("rs");
+                if (rs==null){
+                    rs = new javaxt.sql.Recordset();
+                    rs.open("SELECT * FROM APPLICATION.DOCUMENT_COMPARISON_STATS where id=-1", getConnection2(), false);
+                    rs.setBatchSize(100);
+                    set("rs", rs);
+                }
+                return rs;
+            }
+
+            private Connection getConnection() throws SQLException{
+                Connection conn = (Connection) get("conn");
+                if (conn==null){
+                    conn = Config.getDatabase().getConnection();
+                    set("conn", conn);
+                }
+                return conn;
+            }
+
+            private Connection getConnection2() throws SQLException{
+                Connection conn = (Connection) get("c2");
+                if (conn==null){
+                    conn = Config.getDatabase().getConnection();
+                    set("c2", conn);
+                }
+                return conn;
+            }
+
+            public void exit(){
+                Recordset rs = (Recordset) get("rs");
+                if (rs!=null) rs.close();
+
+                Connection conn = (Connection) get("conn");
+                if (conn!=null) conn.close();
+
+                conn = (Connection) get("c2");
+                if (conn!=null) conn.close();
+            }
+
+
         }.start();
 
+
+
+
+      //Create entry in DOCUMENT_COMPARISON_TEST
+        Long documentComparisonTestID = null;
+        javaxt.sql.Connection conn = null;
+        try{
+            conn = Config.getDatabase().getConnection();
+            javaxt.sql.Recordset rs = new javaxt.sql.Recordset();
+            rs.open("SELECT * FROM APPLICATION.DOCUMENT_COMPARISON_TEST where id=-1", conn, false); //Set "ReadOnly" flag to false
+            rs.addNew();
+            rs.setValue("NUM_THREADS", threadsNum);
+            rs.setValue("SCRIPT_VERSION", scriptVer);
+            rs.setValue("HOST", host);
+            rs.update();
+            documentComparisonTestID = rs.getGeneratedKey().toLong();
+            rs.close();
+            conn.close();
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+            e.printStackTrace();
+        }
+
+
+      //Populate thread pool and run comparisons
         int comparisons = 0;
         for (String itemA : docIds) {
             reversed.remove(reversed.size() - 1);
             for (String itemZ : reversed) {
                 comparisons++;
-                pool.add(new String[]{itemA, itemZ});
+                pool.add(new Object[]{documentComparisonTestID, itemA, itemZ});
             }
         }
 
