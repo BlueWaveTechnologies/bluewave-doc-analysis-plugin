@@ -8,9 +8,9 @@
       <script src="app/analytics/DocumentAnalysis.js" type="text/javascript"></script>
       <script src="app/analytics/DocumentComparison.js" type="text/javascript"></script>
       <script src="app/admin/ComparisonAdmin.js" type="text/javascript"></script>
-      
+
       <link href="style/doc-analysis.css" type="text/css" rel="stylesheet" />
-      
+
     </includes>
 
 
@@ -39,9 +39,16 @@
   </webservices>
 
   <main>
-    <test arg="Document" class="bluewave.utils.FileIndex" method="test"/>
+
+    <test arg="DocumentAnalysis" class="bluewave.document.analysis.Utils" method="test"/>
+    <test arg="FileIndex" class="bluewave.utils.FileIndex" method="test"/>
+
     <compare arg="Compare" class="bluewave.test.BulkCompare" method="compare"/>
     <compare arg="Benchmark" class="bluewave.test.BulkCompare" method="benchmark"/>
+
+    <delete arg="DocumentComparison" class="bluewave.document.analysis.Utils" method="deleteDocumentComparison"/>
+    <delete arg="DocumentIndex" class="bluewave.document.analysis.Utils" method="deleteDocumentIndex"/>
+
   </main>
 
 </plugin>
