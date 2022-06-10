@@ -3,6 +3,7 @@ import bluewave.Config;
 import bluewave.app.File;
 import bluewave.utils.FileIndex;
 import static bluewave.utils.Python.*;
+import bluewave.document.analysis.models.*;
 
 import java.util.*;
 import java.io.IOException;
@@ -986,7 +987,7 @@ public class DocumentService extends WebService {
 
 
       //Check cache
-        ArrayList<bluewave.app.DocumentComparison> docs = new ArrayList<>();
+        ArrayList<DocumentComparison> docs = new ArrayList<>();
         if (documentIDs.length==2){
             String cacheQuery =
             "select ID, INFO from APPLICATION.DOCUMENT_COMPARISON " +
@@ -1031,7 +1032,7 @@ public class DocumentService extends WebService {
               //Get current DocumentComparison from the database
                 it = results.keySet().iterator();
                 while (it.hasNext()){
-                    docs.add(new bluewave.app.DocumentComparison(it.next()));
+                    docs.add(new DocumentComparison(it.next()));
                 }
             }
             catch(Exception e) {
@@ -1100,13 +1101,13 @@ public class DocumentService extends WebService {
         if (documents.size()==2){
 
             if (docs.isEmpty()){
-                bluewave.app.DocumentComparison dc = new bluewave.app.DocumentComparison();
+                DocumentComparison dc = new DocumentComparison();
                 dc.setA(documents.get(0));
                 dc.setB(documents.get(1));
                 docs.add(dc);
             }
 
-            for (bluewave.app.DocumentComparison dc : docs){
+            for (DocumentComparison dc : docs){
                 dc.setInfo(result);
                 dc.save();
             }
@@ -1338,7 +1339,7 @@ public class DocumentService extends WebService {
                 Map<String, Long> constraints = new HashMap<>();
                 constraints.put("a_id=", docId);
                 constraints.put("b_id=", docId);
-                for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find(constraints)){
+                for (DocumentComparison dc : DocumentComparison.find(constraints)){
                     dc.delete();
                 }
 
