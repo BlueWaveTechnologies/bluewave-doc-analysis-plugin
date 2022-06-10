@@ -26,6 +26,7 @@ import javaxt.utils.ThreadPool;
 import java.sql.SQLException;
 import java.time.Duration;
 import javaxt.sql.Recordset;
+import static bluewave.utils.Python.*;
 
 public class BulkCompare {
 
@@ -74,24 +75,86 @@ public class BulkCompare {
         boolean deleteCached = true;
         try {
             deleteCached = Boolean.valueOf(args.get("-deleteCached"));
-            p("deleteCached: " + deleteCached);
         } catch (Exception e) {
             e.printStackTrace();
         }
         
-        if(true) return;
-
+        p("deleteCached: " + deleteCached);
         if(deleteCached) {
             //Delete json sidecar files
             final Directory documentDirectory = new Directory(dir);
             List<Object> docs = documentDirectory.getChildren(true, "*.jsoncached");
+              p("docs found: " + docs.size());
             File file = null;
             for (Object obj : docs) {
                 if (obj instanceof File) {
                     file = (File) obj;
+                    p("deleting file: " + file.toString());
                     file.delete();
                 }
             }
+              p("POST deleteCached: ");
+            //Get python script
+            String scriptName = "compare_pdfs.py";
+            javaxt.io.File[] pyFiles = getScripts(scriptName);
+            if (pyFiles.length==0) {
+                p("Script not found: " + scriptName);
+                return;
+            }
+
+            //Create jsoncached files
+            final javaxt.io.File script = pyFiles[0];
+            
+            //Create thread pool used to create jsoncached files
+            ThreadPool pool = new ThreadPool(threadsNum) {
+                public void process(Object obj) {
+                //Compile command line options
+                  ArrayList<String> params = new ArrayList<>();
+                  params.add("--sidecar_only");
+                  params.add("-f");
+                  params.add(((File) obj).toString());
+                  try {
+                    executeScript(script, params);
+                  }catch(Exception e) {
+                      e.printStackTrace();
+                  }
+                  
+                }
+            }.start();
+            java.time.Instant start = java.time.Instant.now();
+            
+            // Add docs to pool
+            file = null;
+            docs = documentDirectory.getChildren(true, "*.pdf");
+            for (Object obj : docs) {
+                if (obj instanceof File) {
+                    file = (File) obj;
+                    pool.add(file);
+                }
+            }
+            
+            pool.done();
+
+            try {
+                pool.join();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            
+            java.time.Instant end = java.time.Instant.now();
+
+            Duration duration = Duration.between(start, end);
+            long days = duration.toDaysPart();
+            long hours = duration.toHoursPart();
+            long minutes = duration.toMinutesPart();
+            long seconds = duration.toSecondsPart();
+            long millis = duration.toMillisPart();
+            p("\n\n\r");
+            p("Threads: " + threadsNum);
+            p("Total Documents Processed: " + docs.size());
+            p("Total Sidecar Creation Time Elapsed:  " + days + " days, " + hours + " hours, " + minutes
+                + " minutes, " + seconds + " seconds, " + millis + " milliseconds.");
+            p("\n\r");
         }
 
         //Run comparison
@@ -167,7 +230,7 @@ public class BulkCompare {
                             new String[]{a, b},
                             getConnection());
                     java.time.Instant pairEndTime = java.time.Instant.now();
-
+                    p("result: \n\n"+result.toString());
                     Recordset rs = getRecordset();
                     rs.addNew();
                     rs.setValue("TEST_ID", documentComparisonTestID);
@@ -177,11 +240,16 @@ public class BulkCompare {
                     rs.setValue("A_SIZE", Document.get("id=",docs[0]).getFile().getSize());
                     rs.setValue("B_SIZE", Document.get("id=",docs[1]).getFile().getSize());
                     //rs.setValue("INFO", result);
-                    rs.setValue("POST_PROC", result.get("post_processing").toDouble());
-                    JSONObject elapsedTime = result.get("elapsed_time_sec").toJSONObject();
-                    rs.setValue("TOTAL_SEC", elapsedTime.get("total_sec").toDouble());
-                    rs.setValue("PAGES_PER_SEC", elapsedTime.get("pages_per_second").toDouble());
-                    rs.setValue("READ_PDF", elapsedTime.get("read_pdf").toDouble());
+                    JSONObject elapsedTimeObj = result.get("elapsed_time_sec").toJSONObject();
+                    if(elapsedTimeObj != null) {
+                        rs.setValue("POST_PROC", result.get("post_processing").toDouble());
+                        rs.setValue("TOTAL_SEC", elapsedTimeObj.get("total_sec").toDouble());
+                        rs.setValue("PAGES_PER_SEC", elapsedTimeObj.get("pages_per_second").toDouble());
+                        rs.setValue("READ_PDF", elapsedTimeObj.get("read_pdf").toDouble());
+                    } else {
+                        rs.setValue("ELAPSED_TIME_SEC", result.get("elapsed_time_sec").toDouble());
+                        rs.setValue("PAGES_PER_SEC", result.get("pages_per_second").toDouble());
+                    }
                     rs.update();
 
 
@@ -281,14 +349,17 @@ public class BulkCompare {
         java.time.Instant end = java.time.Instant.now();
         
         Duration duration = Duration.between(start, end);
-        long hours = duration.get(ChronoUnit.HOURS);
-        long minutes = duration.get(ChronoUnit.MINUTES);
-        long seconds = duration.get(ChronoUnit.SECONDS);
+        long days = duration.toDaysPart();
+        long hours = duration.toHoursPart();
+        long minutes = duration.toMinutesPart();
+        long seconds = duration.toSecondsPart();
+        long millis = duration.toMillisPart();
         p("\n");
+        p("Threads: " + threadsNum);
         p("Total Documents Processed: " + docIds.size());
         p("Total Comparisons: " + comparisons);
-        p("Total Time Elapsed: " + hours + " hours " + minutes
-                + " minutes " + seconds + " seconds.");
+        p("Total Time Elapsed:  " + days + " days, " + hours + " hours, " + minutes
+                + " minutes, " + seconds + " seconds, " + millis + " milliseconds.");
 
     }
 
