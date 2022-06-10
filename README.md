@@ -1,4 +1,4 @@
-# Introduction
+## Introduction
 
 The document analysis module is used to detect similarities within the PDF documents. This capability is used by analysis to identify potentially fraudulent documents where data tables, images, and text have been plagiarized. Users perform their analysis via a custom web interface where they can search for documents, run pairwise comparisons, and review suspicious document pairs. Under the hood, the document analysis module uses lucene for document search and a custom python script to perform analysis. 
 
@@ -38,17 +38,19 @@ java -jar target\bluewave-dev.jar -config ../config.json -delete index
 ## Python Scripts
 
 ### Prerequisites
-Install PyMuPDF and PyDivSufSort
+Install PyMuPDF, PyDivSufSort, SciKit-Learn
 
 ### Online Installation
 ```
 pip3 install pymupdf
 pip3 install pydivsufsort
+pip3 install sklearn
 ```
 Alternatively
 ```
 python -m pip install --upgrade pymupdf
 python -m pip install --upgrade pydivsufsort
+python -m pip install --upgrade sklearn
 ```
 
 ### Offline Installation
@@ -66,3 +68,17 @@ Note that the wheel files for Linux may need to be renamed to conform to whateve
 >>> pip.pep425tags.get_supported()
 ```
 
+### Command line flags
+The Python script `compare_pdfs.py` takes the following flags:
+   
+ * -f FILENAMES [FILENAMES ...], --filenames FILENAMES [FILENAMES ...]
+                        PDF filenames to compare
+ * -m METHODS [METHODS ...], --methods METHODS [METHODS ...]
+                        Which of the three comparison methods to use: text,
+                        digits, images
+ * -p, --pretty_print    Pretty print output
+ * -c, --regen_cache     Ignore and overwrite cached data
+ * --sidecar_only        Just generate sidecar files, dont run analysis
+ * --no_importance       Do not generate importance scores
+ * -v, --verbose         Print things while running
+ * --version             Print version

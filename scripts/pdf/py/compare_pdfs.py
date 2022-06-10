@@ -141,7 +141,15 @@ def get_version():
 #-------------------------------------------------------------------------------
 # MAIN
 #-------------------------------------------------------------------------------
-def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sidecar_only=False):
+def main(
+    filenames,
+    methods,
+    pretty_print,
+    verbose=False, 
+    regen_cache=False,
+    sidecar_only=False,
+    no_importance=False
+):
     t0 = time.time()
 
     if verbose: print('Reading files...')
@@ -259,10 +267,12 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False, sid
     # suspicious_pairs = filter_sus_pairs(suspicious_pairs)
 
     # Calculate some more things for the final output
-    importance_scoring_sec_t0 = time.time()
     if verbose: print('Gathering output...')
-    if verbose: print('\tAdd importance scores...')
-    suspicious_pairs = importance_score.main(suspicious_pairs)
+
+    importance_scoring_sec_t0 = time.time()
+    if not no_importance:
+        if verbose: print('\tAdd importance scores...')
+        suspicious_pairs = importance_score.main(suspicious_pairs)
     importance_scoring_sec = time.time() - importance_scoring_sec_t0
     
     post_processing_sec_t0 = time.time()
@@ -346,6 +356,11 @@ if __name__ == '__main__':
         action='store_true'
     )
     parser.add_argument(
+        '--no_importance',
+        help='Do not generate importance scores',
+        action='store_true'
+    )
+    parser.add_argument(
         '-v',
         '--verbose',
         help='Print things while running',
@@ -368,6 +383,7 @@ if __name__ == '__main__':
             verbose=args.verbose,
             regen_cache=args.regen_cache,
             sidecar_only=args.sidecar_only,
+            no_importance=args.no_importance,
             )
 
 # Within-file tests:
