@@ -56,18 +56,24 @@ var models = {
         ]
     },
 
+
   //**************************************************************************
   //** DocumentComparisonStats
   //**************************************************************************
     DocumentComparisonStats: {
         fields: [
-            {name: 'test',      type: 'DocumentComparisonTest'},
-            {name: 'a',         type: 'Document'},
-            {name: 'b',         type: 'Document'},
-            {name: 't',         type: 'long'},
-            {name: 'a_size',    type: 'long'},
-            {name: 'b_size',    type: 'long'},
-            {name: 'info',      type: 'json'}
+            {name: 'test',          type: 'DocumentComparisonTest'},
+            {name: 'a',             type: 'Document'},
+            {name: 'b',             type: 'Document'},
+            {name: 't',             type: 'long'},
+            {name: 'a_size',        type: 'long'},
+            {name: 'b_size',        type: 'long'},
+            {name: 'pyTotalDec',    type: 'double'},
+            {name: 'pyPagesPerSec', type: 'double'},
+            {name: 'pyReadPdf',     type: 'double'},
+            {name: 'pyPostProc',    type: 'double'},
+            {name: 'pyElapsedTime', type: 'double'},
+            {name: 'info',          type: 'json'}
         ],
         constraints: [
             {name: 'test',  required: true},

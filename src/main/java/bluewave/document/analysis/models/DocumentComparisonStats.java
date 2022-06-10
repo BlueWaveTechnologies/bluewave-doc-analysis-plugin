@@ -20,6 +20,11 @@ public class DocumentComparisonStats extends javaxt.sql.Model {
     private Long t;
     private Long a_size;
     private Long b_size;
+    private Double pyTotalDec;
+    private Double pyPagesPerSec;
+    private Double pyReadPdf;
+    private Double pyPostProc;
+    private Double pyElapsedTime;
     private JSONObject info;
 
 
@@ -35,6 +40,11 @@ public class DocumentComparisonStats extends javaxt.sql.Model {
             java.util.Map.entry("t", "t"),
             java.util.Map.entry("a_size", "a_size"),
             java.util.Map.entry("b_size", "b_size"),
+            java.util.Map.entry("pyTotalDec", "py_total_dec"),
+            java.util.Map.entry("pyPagesPerSec", "py_pages_per_sec"),
+            java.util.Map.entry("pyReadPdf", "py_read_pdf"),
+            java.util.Map.entry("pyPostProc", "py_post_proc"),
+            java.util.Map.entry("pyElapsedTime", "py_elapsed_time"),
             java.util.Map.entry("info", "info")
 
         ));
@@ -80,6 +90,11 @@ public class DocumentComparisonStats extends javaxt.sql.Model {
             this.t = getValue(rs, "t").toLong();
             this.a_size = getValue(rs, "a_size").toLong();
             this.b_size = getValue(rs, "b_size").toLong();
+            this.pyTotalDec = getValue(rs, "py_total_dec").toDouble();
+            this.pyPagesPerSec = getValue(rs, "py_pages_per_sec").toDouble();
+            this.pyReadPdf = getValue(rs, "py_read_pdf").toDouble();
+            this.pyPostProc = getValue(rs, "py_post_proc").toDouble();
+            this.pyElapsedTime = getValue(rs, "py_elapsed_time").toDouble();
             this.info = new JSONObject(getValue(rs, "info").toString());
 
 
@@ -142,6 +157,11 @@ public class DocumentComparisonStats extends javaxt.sql.Model {
         this.t = json.get("t").toLong();
         this.a_size = json.get("a_size").toLong();
         this.b_size = json.get("b_size").toLong();
+        this.pyTotalDec = json.get("pyTotalDec").toDouble();
+        this.pyPagesPerSec = json.get("pyPagesPerSec").toDouble();
+        this.pyReadPdf = json.get("pyReadPdf").toDouble();
+        this.pyPostProc = json.get("pyPostProc").toDouble();
+        this.pyElapsedTime = json.get("pyElapsedTime").toDouble();
         this.info = json.get("info").toJSONObject();
     }
 
@@ -192,6 +212,46 @@ public class DocumentComparisonStats extends javaxt.sql.Model {
 
     public void setB_size(Long b_size){
         this.b_size = b_size;
+    }
+
+    public Double getPyTotalDec(){
+        return pyTotalDec;
+    }
+
+    public void setPyTotalDec(Double pyTotalDec){
+        this.pyTotalDec = pyTotalDec;
+    }
+
+    public Double getPyPagesPerSec(){
+        return pyPagesPerSec;
+    }
+
+    public void setPyPagesPerSec(Double pyPagesPerSec){
+        this.pyPagesPerSec = pyPagesPerSec;
+    }
+
+    public Double getPyReadPdf(){
+        return pyReadPdf;
+    }
+
+    public void setPyReadPdf(Double pyReadPdf){
+        this.pyReadPdf = pyReadPdf;
+    }
+
+    public Double getPyPostProc(){
+        return pyPostProc;
+    }
+
+    public void setPyPostProc(Double pyPostProc){
+        this.pyPostProc = pyPostProc;
+    }
+
+    public Double getPyElapsedTime(){
+        return pyElapsedTime;
+    }
+
+    public void setPyElapsedTime(Double pyElapsedTime){
+        this.pyElapsedTime = pyElapsedTime;
     }
 
     public JSONObject getInfo(){
