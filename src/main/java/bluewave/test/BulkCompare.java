@@ -27,6 +27,9 @@ import javaxt.sql.Database;
 import static javaxt.utils.Console.*;
 import javaxt.utils.ThreadPool;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.Period;
 import javaxt.sql.Recordset;
 
 public class BulkCompare {
@@ -73,16 +76,26 @@ public class BulkCompare {
             e.printStackTrace();
         }
 
+        boolean deleteCached = true;
+        try {
+            deleteCached = Boolean.valueOf(args.get("-deleteCached"));
+            p("deleteCached: " + deleteCached);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        if(true) return;
 
-
-        //Delete json sidecar files
-        final Directory documentDirectory = new Directory(dir);
-        List<Object> docs = documentDirectory.getChildren(true, "*.jsoncached");
-        File file = null;
-        for (Object obj : docs) {
-            if (obj instanceof File) {
-                file = (File) obj;
-                file.delete();
+        if(deleteCached) {
+            //Delete json sidecar files
+            final Directory documentDirectory = new Directory(dir);
+            List<Object> docs = documentDirectory.getChildren(true, "*.jsoncached");
+            File file = null;
+            for (Object obj : docs) {
+                if (obj instanceof File) {
+                    file = (File) obj;
+                    file.delete();
+                }
             }
         }
 
@@ -139,7 +152,7 @@ public class BulkCompare {
         reversed.addAll(docIds);
         Collections.reverse(reversed);
 
-        LocalTime start = LocalTime.now();
+        java.time.Instant start = java.time.Instant.now();
 
 
       //Create thread pool used to run comparisons and record runtimes
@@ -153,25 +166,27 @@ public class BulkCompare {
 
                     // Get Documents
                     String[] docs = new String[]{a, b};
-
-
-
-                    LocalTime pairStartTime = LocalTime.now();
+                    
+                    java.time.Instant pairStartTime = java.time.Instant.now();
                     JSONObject result = DocumentService.getSimilarity(
                             new String[]{a, b},
                             getConnection());
-                    LocalTime pairEndTime = LocalTime.now();
-
+                    java.time.Instant pairEndTime = java.time.Instant.now();
 
                     Recordset rs = getRecordset();
                     rs.addNew();
                     rs.setValue("TEST_ID", documentComparisonTestID);
                     rs.setValue("A_ID", docs[0]);
                     rs.setValue("B_ID", docs[1]);
-                    rs.setValue("T", ChronoUnit.SECONDS.between(pairStartTime, pairEndTime));
+                    rs.setValue("T", Duration.between(pairStartTime, pairEndTime).toSeconds());
                     rs.setValue("A_SIZE", Document.get("id=",docs[0]).getFile().getSize());
                     rs.setValue("B_SIZE", Document.get("id=",docs[1]).getFile().getSize());
                     //rs.setValue("INFO", result);
+                    rs.setValue("POST_PROC", result.get("post_processing").toDouble());
+                    JSONObject elapsedTime = result.get("elapsed_time_sec").toJSONObject();
+                    rs.setValue("TOTAL_SEC", elapsedTime.get("total_sec").toDouble());
+                    rs.setValue("PAGES_PER_SEC", elapsedTime.get("pages_per_second").toDouble());
+                    rs.setValue("READ_PDF", elapsedTime.get("read_pdf").toDouble());
                     rs.update();
 
 
@@ -268,10 +283,12 @@ public class BulkCompare {
             e.printStackTrace();
         }
 
-        LocalTime end = LocalTime.now();
-        long hours = ChronoUnit.HOURS.between(start, end);
-        long minutes = ChronoUnit.MINUTES.between(start, end) % 60;
-        long seconds = ChronoUnit.SECONDS.between(start, end) % 60;
+        java.time.Instant end = java.time.Instant.now();
+        
+        Duration duration = Duration.between(start, end);
+        long hours = duration.get(ChronoUnit.HOURS);
+        long minutes = duration.get(ChronoUnit.MINUTES);
+        long seconds = duration.get(ChronoUnit.SECONDS);
         p("\n");
         p("Total Documents Processed: " + docIds.size());
         p("Total Comparisons: " + comparisons);
