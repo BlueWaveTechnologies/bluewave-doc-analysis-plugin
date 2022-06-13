@@ -38,11 +38,12 @@ CREATE TABLE APPLICATION.DOCUMENT_COMPARISON_STATS (
     T bigint NOT NULL,
     A_SIZE bigint,
     B_SIZE bigint,
-    PY_TOTAL_DEC double precision,
+    PY_TOTAL_SEC double precision,
     PY_PAGES_PER_SEC double precision,
     PY_READ_PDF double precision,
     PY_POST_PROC double precision,
     PY_ELAPSED_TIME double precision,
+    PY_IMPORTANCE_SCORE double precision,
     INFO jsonb,
     CONSTRAINT PK_DOCUMENT_COMPARISON_STATS PRIMARY KEY (ID)
 );

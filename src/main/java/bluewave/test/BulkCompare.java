@@ -7,12 +7,12 @@ import bluewave.utils.StatusLogger;
 import bluewave.web.services.DocumentService;
 import static bluewave.utils.Python.*;
 import bluewave.document.analysis.Utils;
+import bluewave.document.analysis.models.DocumentComparison;
 
 import java.util.*;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
-
 
 import javaxt.io.Directory;
 import javaxt.io.File;
@@ -20,9 +20,6 @@ import javaxt.json.*;
 import javaxt.sql.*;
 import static javaxt.utils.Console.*;
 import javaxt.utils.ThreadPool;
-
-
-
 
 public class BulkCompare {
 
@@ -32,7 +29,6 @@ public class BulkCompare {
 
         Config.initDatabase();
         Utils.initModels(Config.getDatabase());
-
 
         int threadsNum = -1;
         String dir = null;
@@ -49,22 +45,23 @@ public class BulkCompare {
             return;
         }
 
-
-      //Clean up comparison tables
+        //Clean up comparison tables
         javaxt.sql.Connection conn = null;
-        try{
+        try {
             conn = Config.getDatabase().getConnection();
             for (String table : new String[]{
+                "APPLICATION.DOCUMENT_COMPARISON_SIMILARITY",
                 "APPLICATION.DOCUMENT_COMPARISON_STATS",
                 "APPLICATION.DOCUMENT_COMPARISON_TEST",
                 "APPLICATION.DOCUMENT_COMPARISON"
-            }){
+            }) {
                 conn.execute("delete from " + table);
             }
             conn.close();
-        }
-        catch(Exception e){
-            if (conn!=null) conn.close();
+        } catch (Exception e) {
+            if (conn != null) {
+                conn.close();
+            }
             e.printStackTrace();
         }
 
@@ -76,24 +73,23 @@ public class BulkCompare {
         }
 
         p("deleteCached: " + deleteCached);
-        if(deleteCached) {
+        if (deleteCached) {
             //Delete json sidecar files
             final Directory documentDirectory = new Directory(dir);
             List<Object> docs = documentDirectory.getChildren(true, "*.jsoncached");
-              p("docs found: " + docs.size());
+            p("cached docs found: " + docs.size());
             File file = null;
             for (Object obj : docs) {
                 if (obj instanceof File) {
                     file = (File) obj;
-                    p("deleting file: " + file.toString());
                     file.delete();
                 }
             }
-              p("POST deleteCached: ");
+            p("Cache deleted.");
             //Get python script
             String scriptName = "compare_pdfs.py";
             javaxt.io.File[] pyFiles = getScripts(scriptName);
-            if (pyFiles.length==0) {
+            if (pyFiles.length == 0) {
                 p("Script not found: " + scriptName);
                 return;
             }
@@ -104,16 +100,16 @@ public class BulkCompare {
             //Create thread pool used to create jsoncached files
             ThreadPool pool = new ThreadPool(threadsNum) {
                 public void process(Object obj) {
-                //Compile command line options
-                  ArrayList<String> params = new ArrayList<>();
-                  params.add("--sidecar_only");
-                  params.add("-f");
-                  params.add(((File) obj).toString());
-                  try {
-                    executeScript(script, params);
-                  }catch(Exception e) {
-                      e.printStackTrace();
-                  }
+                    //Compile command line options
+                    ArrayList<String> params = new ArrayList<>();
+                    params.add("--sidecar_only");
+                    params.add("-f");
+                    params.add(((File) obj).toString());
+                    try {
+                        executeScript(script, params);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
 
                 }
             }.start();
@@ -149,7 +145,7 @@ public class BulkCompare {
             p("Threads: " + threadsNum);
             p("Total Documents Processed: " + docs.size());
             p("Total Sidecar Creation Time Elapsed:  " + days + " days, " + hours + " hours, " + minutes
-                + " minutes, " + seconds + " seconds, " + millis + " milliseconds.");
+                    + " minutes, " + seconds + " seconds, " + millis + " milliseconds.");
             p("\n\r");
         }
 
@@ -170,7 +166,6 @@ public class BulkCompare {
 
         //Config.initDatabase();
         //Utils.initModels(Config.getDatabase());
-
         final int threadsNum;
         final String scriptVer = getScriptVersion();
 
@@ -209,8 +204,7 @@ public class BulkCompare {
 
         java.time.Instant start = java.time.Instant.now();
 
-
-      //Create thread pool used to run comparisons and record runtimes
+        //Create thread pool used to run comparisons and record runtimes
         ThreadPool pool = new ThreadPool(threadsNum) {
             public void process(Object obj) {
                 Object[] arr = (Object[]) obj;
@@ -227,28 +221,55 @@ public class BulkCompare {
                             new String[]{a, b},
                             getConnection());
                     java.time.Instant pairEndTime = java.time.Instant.now();
-                    p("result: \n\n"+result.toString());
+
                     Recordset rs = getRecordset();
                     rs.addNew();
                     rs.setValue("TEST_ID", documentComparisonTestID);
                     rs.setValue("A_ID", docs[0]);
                     rs.setValue("B_ID", docs[1]);
                     rs.setValue("T", Duration.between(pairStartTime, pairEndTime).toSeconds());
-                    rs.setValue("A_SIZE", Document.get("id=",docs[0]).getFile().getSize());
-                    rs.setValue("B_SIZE", Document.get("id=",docs[1]).getFile().getSize());
+                    rs.setValue("A_SIZE", Document.get("id=", docs[0]).getFile().getSize());
+                    rs.setValue("B_SIZE", Document.get("id=", docs[1]).getFile().getSize());
                     //rs.setValue("INFO", result);
                     JSONObject elapsedTimeObj = result.get("elapsed_time_sec").toJSONObject();
-                    if(elapsedTimeObj != null) {
-                        rs.setValue("PY_POST_PROC", result.get("post_processing").toDouble());
+                    if (elapsedTimeObj != null) {
+                        rs.setValue("PY_PAGES_PER_SEC", result.get("pages_per_second").toDouble());
+                        rs.setValue("PY_POST_PROC", elapsedTimeObj.get("post_processing").toDouble());
                         rs.setValue("PY_TOTAL_SEC", elapsedTimeObj.get("total_sec").toDouble());
-                        rs.setValue("PY_PAGES_PER_SEC", elapsedTimeObj.get("pages_per_second").toDouble());
                         rs.setValue("PY_READ_PDF", elapsedTimeObj.get("read_pdf").toDouble());
+                        rs.setValue("PY_IMPORTANCE_SCORE", elapsedTimeObj.get("importance_scoring").toDouble());
                     } else {
                         rs.setValue("PY_ELAPSED_TIME_SEC", result.get("elapsed_time_sec").toDouble());
                         rs.setValue("PY_PAGES_PER_SEC", result.get("pages_per_second").toDouble());
                     }
                     rs.update();
 
+                    // Add to DOCUMENT_COMPARISON_SIMILARITY table
+                    JSONArray files = result.get("files").toJSONArray();
+                    Long documentComparisonId = getDocumentComparisonId(
+                            files.get(0).get("document_id").toLong(),
+                            files.get(1).get("document_id").toLong());
+
+                    JSONArray suspiciousPairs = result.get("suspicious_pairs").toJSONArray();
+                    Iterator pairIterator = suspiciousPairs.iterator();
+                    while (pairIterator.hasNext()) {
+                        JSONObject pair = (JSONObject) pairIterator.next();
+                        if (pair.has("pages")) {
+                            JSONArray pages = pair.get("pages").toJSONArray();
+                            if (pages.length() >= 2) {
+                                JSONObject pageA = pages.get(0).toJSONObject();
+                                JSONObject pageB = pages.get(1).toJSONObject();
+                                Recordset rss = getRecordsetSimilarities();
+                                rss.addNew();
+                                rss.setValue("TYPE", pair.get("type"));
+                                rss.setValue("A_PAGE", pageA.get("page").toLong());
+                                rss.setValue("B_PAGE", pageB.get("page").toLong());
+                                rss.setValue("IMPORTANCE", pair.get("importance"));
+                                rss.setValue("COMPARISON_ID", documentComparisonId);
+                                rss.update();
+                            }
+                        }
+                    }
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -256,9 +277,29 @@ public class BulkCompare {
                 docCounter.incrementAndGet();
             }
 
-            private Recordset getRecordset() throws SQLException{
+            private Long getDocumentComparisonId(Long aId, Long bId) {
+                if (aId != null && bId != null) {
+                    String cacheQuery
+                            = "select ID from APPLICATION.DOCUMENT_COMPARISON "
+                            + "where (A_ID=" + aId + " AND B_ID=" + bId + ") "
+                            + "OR (A_ID=" + bId + " AND B_ID=" + aId + ")";
+                    try {
+                        Recordset rs = getRecordsetDC();
+                        rs.open(cacheQuery,  getConnection4());
+                        while (rs.hasNext()) {
+                            Long id = rs.getValue("ID").toLong();
+                            return id;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                return null;
+            }
+
+            private Recordset getRecordset() throws SQLException {
                 Recordset rs = (Recordset) get("rs");
-                if (rs==null){
+                if (rs == null) {
                     rs = new javaxt.sql.Recordset();
                     rs.open("SELECT * FROM APPLICATION.DOCUMENT_COMPARISON_STATS where id=-1", getConnection2(), false);
                     rs.setBatchSize(100);
@@ -267,45 +308,101 @@ public class BulkCompare {
                 return rs;
             }
 
-            private Connection getConnection() throws SQLException{
+            private Recordset getRecordsetSimilarities() throws SQLException {
+                Recordset rs = (Recordset) get("rsSimilarities");
+                if (rs == null) {
+                    rs = new javaxt.sql.Recordset();
+                    rs.open("SELECT * FROM APPLICATION.DOCUMENT_COMPARISON_SIMILARITY where id=-1", getConnection3(), false);
+                    rs.setBatchSize(100);
+                    set("rsSimilarities", rs);
+                }
+                return rs;
+            }
+            private Recordset getRecordsetDC() throws SQLException {
+                Recordset rs = (Recordset) get("rsDC");
+                if (rs == null) {
+                    rs = new javaxt.sql.Recordset();
+                    rs.open("SELECT * FROM APPLICATION.DOCUMENT_COMPARISON where id=-1", getConnection3(), false);
+                    rs.setBatchSize(100);
+                    set("rsDC", rs);
+                }
+                return rs;
+            }            
+
+            private Connection getConnection() throws SQLException {
                 Connection conn = (Connection) get("conn");
-                if (conn==null){
+                if (conn == null) {
                     conn = Config.getDatabase().getConnection();
                     set("conn", conn);
                 }
                 return conn;
             }
 
-            private Connection getConnection2() throws SQLException{
+            private Connection getConnection2() throws SQLException {
                 Connection conn = (Connection) get("c2");
-                if (conn==null){
+                if (conn == null) {
                     conn = Config.getDatabase().getConnection();
                     set("c2", conn);
                 }
                 return conn;
             }
 
-            public void exit(){
-                Recordset rs = (Recordset) get("rs");
-                if (rs!=null) rs.close();
+            private Connection getConnection3() throws SQLException {
+                Connection conn = (Connection) get("c3");
+                if (conn == null) {
+                    conn = Config.getDatabase().getConnection();
+                    set("c3", conn);
+                }
+                return conn;
+            }
+            private Connection getConnection4() throws SQLException {
+                Connection conn = (Connection) get("c4");
+                if (conn == null) {
+                    conn = Config.getDatabase().getConnection();
+                    set("c4", conn);
+                }
+                return conn;
+            }            
 
+            public void exit() {
+                Recordset rs = (Recordset) get("rs");
+                if (rs != null) {
+                    rs.close();
+                }
+                rs = (Recordset) get("rsSimilarities");
+                if (rs != null) {
+                    rs.close();
+                }
+                rs = (Recordset) get("rsDC");
+                if (rs != null) {
+                    rs.close();
+                }
                 Connection conn = (Connection) get("conn");
-                if (conn!=null) conn.close();
+                if (conn != null) {
+                    conn.close();
+                }
 
                 conn = (Connection) get("c2");
-                if (conn!=null) conn.close();
-            }
+                if (conn != null) {
+                    conn.close();
+                }
 
+                conn = (Connection) get("c3");
+                if (conn != null) {
+                    conn.close();
+                }
+                conn = (Connection) get("c4");
+                if (conn != null) {
+                    conn.close();
+                }                
+            }
 
         }.start();
 
-
-
-
-      //Create entry in DOCUMENT_COMPARISON_TEST
+        //Create entry in DOCUMENT_COMPARISON_TEST
         Long documentComparisonTestID = null;
         javaxt.sql.Connection conn = null;
-        try{
+        try {
             conn = Config.getDatabase().getConnection();
             javaxt.sql.Recordset rs = new javaxt.sql.Recordset();
             rs.open("SELECT * FROM APPLICATION.DOCUMENT_COMPARISON_TEST where id=-1", conn, false); //Set "ReadOnly" flag to false
@@ -317,14 +414,14 @@ public class BulkCompare {
             documentComparisonTestID = rs.getGeneratedKey().toLong();
             rs.close();
             conn.close();
-        }
-        catch(Exception e){
-            if (conn!=null) conn.close();
+        } catch (Exception e) {
+            if (conn != null) {
+                conn.close();
+            }
             e.printStackTrace();
         }
 
-
-      //Populate thread pool and run comparisons
+        //Populate thread pool and run comparisons
         int comparisons = 0;
         for (String itemA : docIds) {
             reversed.remove(reversed.size() - 1);
@@ -402,8 +499,6 @@ public class BulkCompare {
         return docIds;
     }
 
-
-
     private static String getScriptVersion() {
         if (scriptVersion == null) {
             //Get python script
@@ -422,4 +517,5 @@ public class BulkCompare {
         }
         return scriptVersion;
     }
+
 }
