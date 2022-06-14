@@ -65,7 +65,7 @@ public class BulkCompare {
             e.printStackTrace();
         }
 
-        boolean deleteCached = true;
+        boolean deleteCached = false;
         try {
             deleteCached = Boolean.valueOf(args.get("-deleteCached"));
         } catch (Exception e) {
@@ -185,12 +185,20 @@ public class BulkCompare {
             return;
         }
 
-        final Directory documentDirectory = new Directory(dir);
-        List<String> documents = getDocumentListSorted(documentDirectory);
-
-        // Create docIds i.e., bluewave.app.Document
-        List<String> docIds = getOrCreateDocumentIds(
-                documents.toArray(new String[]{}), Config.getDatabase());
+        /**
+         * Replace this block w/db call  *
+         */
+//        final Directory documentDirectory = new Directory(dir);
+//        List<String> documents = getDocumentListSorted(documentDirectory);
+//
+//        // Create docIds i.e., bluewave.app.Document
+//        List<String> docIds = getOrCreateDocumentIds(
+//                documents.toArray(new String[]{}), Config.getDatabase());
+        /**
+         * END *
+         */
+        
+        List<String> docIds = getDocumentIds();
 
         int n = docIds.size();
         long proposedNumComparisons = ((n * n) - n) / 2;
@@ -285,7 +293,7 @@ public class BulkCompare {
                             + "OR (A_ID=" + bId + " AND B_ID=" + aId + ")";
                     try {
                         Recordset rs = getRecordsetDC();
-                        rs.open(cacheQuery,  getConnection4());
+                        rs.open(cacheQuery, getConnection4());
                         while (rs.hasNext()) {
                             Long id = rs.getValue("ID").toLong();
                             return id;
@@ -318,6 +326,7 @@ public class BulkCompare {
                 }
                 return rs;
             }
+
             private Recordset getRecordsetDC() throws SQLException {
                 Recordset rs = (Recordset) get("rsDC");
                 if (rs == null) {
@@ -327,7 +336,7 @@ public class BulkCompare {
                     set("rsDC", rs);
                 }
                 return rs;
-            }            
+            }
 
             private Connection getConnection() throws SQLException {
                 Connection conn = (Connection) get("conn");
@@ -355,6 +364,7 @@ public class BulkCompare {
                 }
                 return conn;
             }
+
             private Connection getConnection4() throws SQLException {
                 Connection conn = (Connection) get("c4");
                 if (conn == null) {
@@ -362,7 +372,7 @@ public class BulkCompare {
                     set("c4", conn);
                 }
                 return conn;
-            }            
+            }
 
             public void exit() {
                 Recordset rs = (Recordset) get("rs");
@@ -394,7 +404,7 @@ public class BulkCompare {
                 conn = (Connection) get("c4");
                 if (conn != null) {
                     conn.close();
-                }                
+                }
             }
 
         }.start();
@@ -496,6 +506,24 @@ public class BulkCompare {
             docIds.add(tempDoc.getID().toString());
         }
 
+        return docIds;
+    }
+
+    private static List<String> getDocumentIds() {
+        List<String> docIds = new ArrayList<>();
+        String query = "select ID from APPLICATION.DOCUMENT";
+        try {
+            Connection conn = Config.getDatabase().getConnection();
+            Recordset rs = new javaxt.sql.Recordset();
+            rs.open(query, conn);
+            while (rs.hasNext()) {
+                docIds.add(rs.getValue("ID").toString());
+                rs.moveNext();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        p("documents size: " + docIds.size());
         return docIds;
     }
 
