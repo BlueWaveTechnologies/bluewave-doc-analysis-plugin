@@ -186,7 +186,7 @@ public class BulkCompare {
         }
 
         /**
-         * Replace this block w/db call  *
+         * Replace this block w/db call *
          */
 //        final Directory documentDirectory = new Directory(dir);
 //        List<String> documents = getDocumentListSorted(documentDirectory);
@@ -197,7 +197,6 @@ public class BulkCompare {
         /**
          * END *
          */
-        
         List<String> docIds = getDocumentIds();
 
         int n = docIds.size();
@@ -511,7 +510,10 @@ public class BulkCompare {
 
     private static List<String> getDocumentIds() {
         List<String> docIds = new ArrayList<>();
-        String query = "select ID from APPLICATION.DOCUMENT";
+//        String query = "select ID from APPLICATION.DOCUMENT";
+        String query = "SELECT DOCUMENT.ID FROM APPLICATION.DOCUMENT JOIN APPLICATION.FILE "
+                + "ON APPLICATION.DOCUMENT.FILE_ID=APPLICATION.FILE.ID where size<(200*1024*1024)";
+
         try {
             Connection conn = Config.getDatabase().getConnection();
             Recordset rs = new javaxt.sql.Recordset();
