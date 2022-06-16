@@ -171,33 +171,38 @@ public class BulkCompare {
 
         String dir = null;
         final String host;
+        final String docIdSource;
         try {
             threadsNum = Integer.parseInt(args.get("-threads"));
             dir = args.get("-dir");
             host = args.get("-host");
+            docIdSource = args.get("-source");
         } catch (Exception e) {
             e.printStackTrace();
             return;
         }
 
-        if (threadsNum == -1 || dir == null) {
-            p("params needed: -threads & -dir");
+        if (threadsNum == -1 || dir == null || docIdSource == null) {
+            p("params needed: -threads & -dir & -source");
             return;
         }
 
-        /**
-         * Replace this block w/db call *
-         */
-//        final Directory documentDirectory = new Directory(dir);
-//        List<String> documents = getDocumentListSorted(documentDirectory);
-//
-//        // Create docIds i.e., bluewave.app.Document
-//        List<String> docIds = getOrCreateDocumentIds(
-//                documents.toArray(new String[]{}), Config.getDatabase());
-        /**
-         * END *
-         */
-        List<String> docIds = getDocumentIds();
+        List<String> docIds = null;
+        
+        final Directory documentDirectory = new Directory(dir);
+        List<String> documents = getDocumentListSorted(documentDirectory);
+
+        if(docIdSource.equals("fs")) {
+            /** Create docIds from filesystem */
+            docIds = getOrCreateDocumentIds(
+                    documents.toArray(new String[]{}), Config.getDatabase());
+        } else if (docIdSource.equals("db")) {
+            /** Get docIds from db **/
+            docIds = getDocumentIds();
+        } else {
+            p(" param '-source' not found, value: fs | db");
+            return;
+        }
 
         int n = docIds.size();
         long proposedNumComparisons = ((n * n) - n) / 2;
