@@ -188,16 +188,20 @@ public class BulkCompare {
         }
 
         List<String> docIds = null;
-        
+
         final Directory documentDirectory = new Directory(dir);
         List<String> documents = getDocumentListSorted(documentDirectory);
 
-        if(docIdSource.equals("fs")) {
-            /** Create docIds from filesystem */
+        if (docIdSource.equals("fs")) {
+            /**
+             * Create docIds from filesystem
+             */
             docIds = getOrCreateDocumentIds(
                     documents.toArray(new String[]{}), Config.getDatabase());
         } else if (docIdSource.equals("db")) {
-            /** Get docIds from db **/
+            /**
+             * Get docIds from db *
+             */
             docIds = getDocumentIds();
         } else {
             p(" param '-source' not found, value: fs | db");
@@ -551,6 +555,67 @@ public class BulkCompare {
             }
         }
         return scriptVersion;
+    }
+
+    public static void exportReport(HashMap<String, String> args) throws Exception {
+
+        javaxt.io.Directory dir = new javaxt.io.Directory("temp/report/");
+        String reportName = "similarity_report_" + new javaxt.utils.Date() + ".csv";
+        javaxt.io.File file = new javaxt.io.File(dir, reportName.toLowerCase().replaceAll(" ", "_"));
+        file.create();
+        java.io.BufferedWriter out = file.getBufferedWriter("UTF-8");
+
+        Config.initDatabase();
+
+        String query = "select dcs.COMPARISON_ID, dcs.TYPE, dcs.A_PAGE, dcs.B_PAGE, dcs.IMPORTANCE, dc.A_ID, dc.B_ID  \n"
+                + "from APPLICATION.DOCUMENT_COMPARISON_SIMILARITY as dcs \n"
+                + "JOIN APPLICATION.DOCUMENT_COMPARISON as dc on dcs.COMPARISON_ID = dc.ID";
+        Connection conn = null;
+        try {
+            conn = Config.getDatabase().getConnection();
+            Recordset rs = new javaxt.sql.Recordset();
+            rs.open(query, conn);
+            boolean addHeader = true;
+            while (rs.hasNext()) {
+                Field[] fields = rs.getFields();
+                if (addHeader) {
+                    for (int i = 0; i < fields.length; i++) {
+                        if (i > 0) {
+                            out.write(",");
+                        }
+                        out.write(fields[i].getName());
+                    }
+                    addHeader = false;
+                }
+
+                out.write("\n");
+                for (int i = 0; i < fields.length; i++) {
+                    if (i > 0) {
+                        out.write(",");
+                    }
+                    String val = fields[i].getValue().toString();
+                    if (val != null) {
+                        if (val.contains(",")) {
+                            val = "\"" + val + "\"";
+                        }
+                        out.write(val);
+                    }
+                }
+                
+                rs.moveNext();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            
+            try {
+                if(file != null) p("File: " + file.getPath() + file.getName());
+                if(conn != null) conn.close();
+                if(out != null) out.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 }

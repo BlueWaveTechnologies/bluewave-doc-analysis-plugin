@@ -45,6 +45,7 @@
 
     <compare arg="Compare" class="bluewave.test.BulkCompare" method="compare"/>
     <compare arg="Benchmark" class="bluewave.test.BulkCompare" method="benchmark"/>
+    <compare arg="Report" class="bluewave.test.BulkCompare" method="exportReport"/>
 
     <delete arg="DocumentComparison" class="bluewave.document.analysis.Utils" method="deleteDocumentComparison"/>
     <delete arg="DocumentIndex" class="bluewave.document.analysis.Utils" method="deleteDocumentIndex"/>
