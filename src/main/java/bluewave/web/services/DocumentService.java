@@ -1,6 +1,7 @@
 package bluewave.web.services;
 import bluewave.Config;
 import bluewave.app.File;
+import bluewave.document.analysis.Utils;
 import bluewave.utils.FileIndex;
 import static bluewave.utils.Python.*;
 import bluewave.document.analysis.models.*;
@@ -59,7 +60,11 @@ public class DocumentService extends WebService {
         webSocketID = new AtomicLong(0);
         listeners = new ConcurrentHashMap<>();
         DocumentService me = this;
-
+        try {
+            Utils.initModels(Config.getDatabase());
+        }catch(Exception e) {
+            e.printStackTrace();
+        }
 
       //Start thread pool used to index files
         int numThreads = 20;
