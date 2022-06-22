@@ -75,6 +75,8 @@ bluewave.analytics.StatNavbar = function(parent, config){
           .attr("preserveAspectRatio", "xMinYMin meet")
           .attr("viewBox", `0 0 ${rectSize.width} 35`)
 
+        svg.attr("visibility", "hidden");
+
       // format data for barchart
         var xAxis = Object.keys(records[0])[0];
         var yAxis = Object.keys(records[0])[4];
@@ -86,18 +88,22 @@ bluewave.analytics.StatNavbar = function(parent, config){
         for (var i in records){
             as = as + `${i},${parseInt(records[i][yAxis])}\n`;
         };
+      // create last record in the dataset for rendering
+        var removeThisIndex = records.length;
+        as = as + `${removeThisIndex}, ${parseInt(100)}`;
 
         var csv = csv + as;
         var data = d3.csvParse(csv);
         // var valueBarChart = new bluewave.charts.BarChart(d, {});
         var valueBarChart = new bluewave.charts.BarChart(svg, {});
-        valueBarChart.update({xAxis:xAxis, yAxis:yAxis, yTicks: false, xTicks: false, barColor:"black", showTooltip:false, colors:["black"]}, [data]);
 
-
+        valueBarChart.update({xAxis:xAxis, yAxis:yAxis, yTicks: false, xTicks: false, barColor:"black", showTooltip:false, colors:["#0f6391"]}, [data]);
 
 
         setTimeout(() => {
 
+          // get the bar associated with index
+            svg.selectAll("rect").filter(function (d, i) { return i === removeThisIndex;}).node().remove();
           // fix barchart padding
             var es = d3.selectAll("rect")._groups[0];
             var difference = es[1].x.animVal.value - es[0].x.animVal.value;
@@ -106,9 +112,16 @@ bluewave.analytics.StatNavbar = function(parent, config){
             var rect = javaxt.dhtml.utils.getRect(es[0].parentNode);
             var currentBarWidth = rect.width/2;
             var newBarWidth = currentBarWidth +(difference-currentBarWidth-(currentBarWidth*f));
+            var tr = svg.selectAll("rect").size()-1;
             d3.selectAll("rect").each(function (d,i){
                 d3.select(this).attr("width",newBarWidth);
+
+                if (i === tr){
+                  svg.attr("visibility", "visible");
+                }
+
             });
+
 
             var createTooltip = function(){
                 tooltip = document.createElement("div");
@@ -160,12 +173,13 @@ bluewave.analytics.StatNavbar = function(parent, config){
                     if (!tooltip) createTooltip();
                     tooltip.update(this);
                     tooltip.show();
-                    d3.select(this).style.backgroundColor = "white";
-                    d3.select(this).style.opacity = .8;
+                    d3.select(this).attr("fill", "white");
+                    d3.select(this).attr("opacity", .8);
                   })
                   .on("mouseleave", function(){
                     if (tooltip) tooltip.hide();
-                    d3.select(this).style.backgroundColor = null;
+                    d3.select(this).attr("fill", "none");
+                    d3.select(this).attr("opacity", null);
                   })
                   .on("click", function(){
                     me.barClick(this);

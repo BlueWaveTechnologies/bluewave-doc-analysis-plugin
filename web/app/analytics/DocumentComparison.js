@@ -1331,11 +1331,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 var div = divs[currPair];
 
                 d3.selectAll("rect").each(function(){
-                    if (d3.select(this).attr("fill") == 'red'){
-                        d3.select(this).attr("fill","black");
+                    if (d3.select(this).attr("fill") == '#ffc601'){
+                        d3.select(this).attr("fill","#0f6391");
                     };
                 });
-                d3.select(d3.select(div).data()[0].bar).attr("fill","red");
+                d3.select(d3.select(div).data()[0].bar).attr("fill","#ffc601");
             }
             if (currPair === 0){
                 setTimeout(() => {
