@@ -103,6 +103,8 @@ bluewave.analytics.StatNavbar = function(parent, config){
         setTimeout(() => {
 
           // get the bar associated with index
+
+
             svg.selectAll("rect").filter(function (d, i) { return i === removeThisIndex;}).node().remove();
           // fix barchart padding
             var es = d3.selectAll("rect")._groups[0];
@@ -151,7 +153,7 @@ bluewave.analytics.StatNavbar = function(parent, config){
 
                     this.show();
                     var data = d3.select(overlayRect).data()[0];
-                    innerDiv.innerText = `Doc page (L): ${data.left }\nDoc page (R): ${data.right}\nImportance (AVG): ${data.importance}\nMatches: ${data.matches}`;
+                    innerDiv.innerText = `Doc page (L): ${data.left }\nDoc page (R): ${data.right}\nImportance (MAX): ${data.importance}\nMatches: ${data.matches}`;
 
 
                 }
