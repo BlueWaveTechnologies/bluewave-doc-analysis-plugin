@@ -125,28 +125,32 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //**************************************************************************
     var createSearchBar = function(parent){
         searchBar = bluewave.utils.createSearchBar(parent);
-        searchBar.onChange = function(q){
-            // console.log(q);
+
+        var c = document.createElement("div");
+        c.className = "document-search-search-bar-results";
+
+        addShowHide(c);
+        searchBar.el.appendChild(c);
+
+        searchBar.updateCount = (count) => {
+            console.log(searchBar.getValue());
+            if (searchBar.getValue() !== ""){
+                c.innerText = `${count} results`;
+                c.show();
+            }
+            else c.hide();
         };
+
+        searchBar.onChange = function(q){
+        };
+
         searchBar.getSearchTerms = function(q){
             if (!q) q = searchBar.getValue();
-//            if (typeof q === 'string'){
-//
-//                var q = q.split(new RegExp(/(\-*'.*?'|\-*".*?"|\-*\S+)/, 'g'));
-//
-//                var ignoredSearches = new Set(["", " "]);
-//                q = q.filter((queryParam) => {
-//                    return !ignoredSearches.has(queryParam);
-//                });
-//                for (let value in q) q[value] = q[value].trim();
-//
-//            }
             return q;
         };
+
         searchBar.onSearch = function(q){
             q = searchBar.getSearchTerms(q);
-            console.log("logging result of regular expression parsing below");
-            console.log(q);
             grid.update(q);
         };
         searchBar.onClear = function(){
@@ -243,13 +247,17 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 rows.forEach((row)=>{
                     data.push(createRecord(row));
                 });
-
+                searchBar.updateCount(data.length);
                 return data;
             },
             update: function(row, record){
                 if (config.showCheckboxes===true) row.set("x", record.id);
 
                 var searchMetadata = record.info;
+                console.log("calling update function");
+                console.log(record);
+                console.log(row);
+                console.log("record printed above");
                 if (searchMetadata && searchMetadata.highlightFragment){
 
                     var recordDiv = document.createElement("div");
@@ -328,7 +336,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
     var parseCSV = bluewave.utils.parseCSV;
     var formatNumber = bluewave.utils.formatNumber;
     var getDateFormat = bluewave.chart.utils.getDateFormat;
-
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
     var merge = javaxt.dhtml.utils.merge;
     var createTable = javaxt.dhtml.utils.createTable;
 
