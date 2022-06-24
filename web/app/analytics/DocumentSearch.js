@@ -115,7 +115,64 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //**************************************************************************
     var createHeader = function(parent){
 
-        createSearchBar(parent);
+        var table = createTable();
+        var tbody = table.firstChild;
+        parent.appendChild(table);
+        var tr = document.createElement("tr");
+        tbody.appendChild(tr);
+
+        var td = document.createElement("td");
+        tr.appendChild(td);
+        tr.id ="thisid";
+        td.style.cssText = `
+        width: 100%;
+        `;
+        createSearchBar(td);
+        var td = document.createElement("td");
+        tr.appendChild(td);
+
+        // add show preview toggle button
+        var textString = document.createElement("div");
+        textString.innerText = "Preview";
+        textString.style.cssText = `
+        z-index: 5;
+        font-size: 16px;
+        width: 100px;
+        height: 20px;
+        color: #272727;
+        top: 14px;
+        margin: 0px 20px;
+        right: 10px;
+        position: relative;
+        `;
+        td.appendChild(textString);
+
+        var toggleContainer = document.createElement("div");
+        toggleContainer.style.cssText = `
+        z-index: 7;
+        left: 75px;
+        bottom: 6px;
+        position: relative;
+        `;
+
+        var toggleSwitch = new javaxt.dhtml.Switch(toggleContainer);
+        toggleSwitch.setValue(false);
+        td.appendChild(toggleContainer);
+
+        toggleSwitch.onChange = function(){
+            var previewPanel = document.getElementById("preview-panel");
+            var showPreview = previewPanel.getConfig();
+            var setOff = () =>{
+                previewPanel.setConfig(false);
+                previewPanel.hide();
+            };
+            var setOn = () =>{
+                previewPanel.setConfig(true);
+            };
+
+            if (showPreview ? setOff() : setOn());
+        };
+        tr.toggleSwitch = toggleSwitch;
 
     };
 
@@ -149,6 +206,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             console.log(q);
             grid.update(q);
         };
+
         searchBar.onClear = function(){
             grid.update();
         };

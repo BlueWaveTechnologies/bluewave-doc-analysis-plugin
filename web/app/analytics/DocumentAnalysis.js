@@ -194,48 +194,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
       //Create placeholder for title
         td = document.createElement("td");
         td.style.width = "50%";
-
-        // add show preview toggle button
-
-        var textString = document.createElement("div");
-        textString.innerText = "Show PDF Preview";
-        textString.style.cssText = `
-        position: absolute;
-        z-index: 5;
-        font-size: 14px;
-        width: 300px;
-        height: 23px;
-        color: #d9dbde;
-        top: 20px;
-        margin: 0px 20px;
-        `
-        td.appendChild(textString);
-
-        var toggleContainer = document.createElement("div");
-        toggleContainer.style.cssText = `
-        left: 150px;
-        position: absolute;
-        top: 18px;
-        z-index: 7;
-        `;
-        var toggleSwitch = new javaxt.dhtml.Switch(toggleContainer);
-        toggleSwitch.setValue(false);
-        td.appendChild(toggleContainer);
-
-        toggleSwitch.onChange = function(){
-            var setOff = () =>{
-                defaultConfig.showPreview = false;
-                textString.style.color = "#d9dbde"
-                previewPanel.hide();
-            };
-            var setOn = () =>{
-                defaultConfig.showPreview = true;
-                textString.style.color = "#fff";
-            };
-
-            if (defaultConfig.showPreview ? setOff() : setOn());
-        };
-        tr.toggleSwitch = toggleSwitch;
         tr.appendChild(td);
 
 
@@ -1357,6 +1315,18 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         previewPanel.style.width = "";
         previewPanel.style.height = "100%";
         parent.appendChild(previewPanel);
+
+
+
+      // add references for access within DocumentSearch
+        previewPanel.id = "preview-panel";
+        previewPanel.getConfig = () =>{
+            return defaultConfig.showPreview;
+        };
+        previewPanel.setConfig = (bool)=>{
+            defaultConfig.showPreview = bool;
+        };
+
         var iframe = document.createElement("iframe");
         iframe.style.width = "100%";
         iframe.style.height = "100%";
