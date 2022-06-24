@@ -1264,8 +1264,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 }
                 else{
                     var config = defaultConfig;
+                    previewPanel.update(r);
                     if (config.showPreview){
-                        previewPanel.update(r);
                         previewPanel.show();
                     }
                 }

@@ -168,6 +168,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             };
             var setOn = () =>{
                 previewPanel.setConfig(true);
+                previewPanel.show();
             };
 
             if (showPreview ? setOff() : setOn());
