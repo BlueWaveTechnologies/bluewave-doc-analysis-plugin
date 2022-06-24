@@ -121,43 +121,35 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         var tr = document.createElement("tr");
         tbody.appendChild(tr);
 
-        var td = document.createElement("td");
-        tr.appendChild(td);
-        tr.id ="thisid";
-        td.style.cssText = `
-        width: 100%;
-        `;
-        createSearchBar(td);
-        var td = document.createElement("td");
-        tr.appendChild(td);
 
-        // add show preview toggle button
+      //Create searchbar
+        var td = document.createElement("td");
+        td.style.width = "100%";
+        tr.appendChild(td);
+        createSearchBar(td);
+
+
+      //Create toggle switch
+        var td = document.createElement("td");
+        tr.appendChild(td);
+        var div = document.createElement("div");
+        div.style.width = "110px";
+        td.appendChild(div);
+
         var textString = document.createElement("div");
         textString.innerText = "Preview";
-        textString.style.cssText = `
-        z-index: 5;
-        font-size: 16px;
-        width: 100px;
-        height: 20px;
-        color: #272727;
-        top: 14px;
-        margin: 0px 20px;
-        right: 10px;
-        position: relative;
-        `;
-        td.appendChild(textString);
+        textString.className = "toolbar-button-label";
+        textString.style.float = "left";
+        textString.style.padding = "0 5px 0 8px";
+        textString.style.lineHeight = "24px";
+        div.appendChild(textString);
 
         var toggleContainer = document.createElement("div");
-        toggleContainer.style.cssText = `
-        z-index: 7;
-        left: 75px;
-        bottom: 6px;
-        position: relative;
-        `;
+        toggleContainer.style.float = "left";
+        div.appendChild(toggleContainer);
 
         var toggleSwitch = new javaxt.dhtml.Switch(toggleContainer);
         toggleSwitch.setValue(false);
-        td.appendChild(toggleContainer);
 
         toggleSwitch.onChange = function(){
             var previewPanel = document.getElementById("preview-panel");
