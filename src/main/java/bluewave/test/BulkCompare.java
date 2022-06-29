@@ -556,7 +556,7 @@ public class BulkCompare {
         }
         return scriptVersion;
     }
-
+    
     public static void exportReport(HashMap<String, String> args) throws Exception {
 
         javaxt.io.Directory dir = new javaxt.io.Directory("temp/report/");
@@ -566,15 +566,12 @@ public class BulkCompare {
         java.io.BufferedWriter out = file.getBufferedWriter("UTF-8");
 
         Config.initDatabase();
-
-        String query = "select dcs.COMPARISON_ID, dcs.TYPE, dcs.A_PAGE, dcs.B_PAGE, dcs.IMPORTANCE, dc.A_ID, dc.B_ID  \n"
-                + "from APPLICATION.DOCUMENT_COMPARISON_SIMILARITY as dcs \n"
-                + "JOIN APPLICATION.DOCUMENT_COMPARISON as dc on dcs.COMPARISON_ID = dc.ID";
         Connection conn = null;
+        
         try {
             conn = Config.getDatabase().getConnection();
-            Recordset rs = new javaxt.sql.Recordset();
-            rs.open(query, conn);
+            Recordset rs = DocumentService.getSimilarityRecordSet(conn);
+            
             boolean addHeader = true;
             while (rs.hasNext()) {
                 Field[] fields = rs.getFields();
@@ -616,6 +613,6 @@ public class BulkCompare {
                 e.printStackTrace();
             }
         }
-    }
-
+    }       
+    
 }
