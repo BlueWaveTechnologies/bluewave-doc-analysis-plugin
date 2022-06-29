@@ -1116,12 +1116,95 @@ public class DocumentService extends WebService {
                 dc.setInfo(result);
                 dc.save();
             }
+            
+            JSONArray suspiciousPairs = result.get("suspicious_pairs").toJSONArray();
+            Iterator pairIterator = suspiciousPairs.iterator();
+            while (pairIterator.hasNext()) {
+                JSONObject pair = (JSONObject) pairIterator.next();
+                if (pair.has("pages")) {
+                    JSONArray pages = pair.get("pages").toJSONArray();
+                    if (pages.length() >= 2) {
+                        JSONObject pageA = pages.get(0).toJSONObject();
+                        JSONObject pageB = pages.get(1).toJSONObject();
+                        DocumentComparisonSimilarity dss = new DocumentComparisonSimilarity();
+                        dss.setType(pair.get("type").toString());
+                        dss.setA_page(pageA.get("page").toInteger());
+                        dss.setB_page(pageB.get("page").toInteger());
+                        dss.setImportance(pair.get("importance").toInteger());
+                        dss.setComparison(DocumentComparison.get("ID=", docs.get(0).getID()));
+                        dss.save();
+                    }
+                }
+            }            
         }
-
 
         return result;
     }
 
+    public static Recordset getSimilarityRecordSet(Connection conn) throws Exception {
+
+        String query = "select dcs.COMPARISON_ID, dcs.TYPE, dcs.A_PAGE, dcs.B_PAGE, dcs.IMPORTANCE, dc.A_ID, dc.B_ID  \n"
+                + "from APPLICATION.DOCUMENT_COMPARISON_SIMILARITY as dcs \n"
+                + "JOIN APPLICATION.DOCUMENT_COMPARISON as dc on dcs.COMPARISON_ID = dc.ID";
+        Recordset rs = new javaxt.sql.Recordset();
+        try {
+            rs.open(query, conn);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return rs;
+    }     
+    
+    public ServiceResponse getSimilarityResults(ServiceRequest request, Database database)
+        throws ServletException {
+        
+        StringBuilder out = new StringBuilder();
+        Connection conn = null;
+        
+        try {
+            conn = database.getConnection();
+            Recordset rs = getSimilarityRecordSet(conn);
+            
+            boolean addHeader = true;
+            while (rs.hasNext()) {
+                Field[] fields = rs.getFields();
+                if (addHeader) {
+                    for (int i = 0; i < fields.length; i++) {
+                        if (i > 0) {
+                            out.append(",");
+                        }
+                        out.append(fields[i].getName());
+                    }
+                    addHeader = false;
+                }
+
+                out.append("\n");
+                for (int i = 0; i < fields.length; i++) {
+                    if (i > 0) {
+                        out.append(",");
+                    }
+                    String val = fields[i].getValue().toString();
+                    if (val != null) {
+                        if (val.contains(",")) {
+                            val = "\"" + val + "\"";
+                        }
+                        out.append(val);
+                    }
+                }
+                
+                rs.moveNext();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if(conn != null) conn.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return new ServiceResponse(out.toString());
+    }     
 
   //**************************************************************************
   //** getFile
