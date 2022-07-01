@@ -16,7 +16,7 @@ bluewave.analytics.StatNavbar = function(parent, config){
   //** Constructor
   //**************************************************************************
     var init = function(){
-        // merge configs
+      // merge configs
         config = merge(config, defaultConfig);
     };
 
@@ -24,8 +24,12 @@ bluewave.analytics.StatNavbar = function(parent, config){
   //** this.clear
   //**************************************************************************
     this.clear = function(){
-        if (navbar) navbar.remove();
+        if (navbar) {
+          navbar.parentNode.removeChild(navbar);
+          navbar = null;
+        };
     };
+
 
   //**************************************************************************
   //** this.update

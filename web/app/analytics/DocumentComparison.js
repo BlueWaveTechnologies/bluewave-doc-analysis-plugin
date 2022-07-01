@@ -17,7 +17,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var waitmask;
     var pageOrder;
     var results = {};
-    var navbarRecords;
+    var currPairList;
     var fileIndex = 0;
     var suspiciousPages = [];
     var totalPages = 0;
@@ -86,6 +86,22 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** getCurrentPairs
+  //**************************************************************************
+    this.getCurrPairs = function(){
+        return currPairList;
+
+    };
+
+  //**************************************************************************
+  //** goToIndex
+  //**************************************************************************
+    this.goToIndex = function(pairIndex){
+        currPair = pairIndex;
+        raisePanel(false);
+    };
+
 
   //**************************************************************************
   //** getSimilarities
@@ -121,7 +137,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
     this.update = function(){
         me.clear();
-
       //Process arguments
         var similarities, files;
         if (arguments.length>0){
@@ -220,14 +235,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         panels[1].div.appendChild(comparisonPanel.el);
 
         pageOrder = new Set();
-        navbarRecords = [];
+        currPairList = [];
         var i = 0;
         suspiciousPages.forEach((page)=>{
             if (page.suspiciousPairs.length > 0){
                 var pairs = page.suspiciousPairs;
                 pairs.forEach((pair)=>{
                     if (pageOrder.has(`[${pair.pages[0].page}, ${pair.pages[1].page}]`) === false){
-                        navbarRecords.push({"index": i, "left":pair.pages[0].page, "right":pair.pages[1].page, "matches": page.suspiciousPairs.length, "importance": page.maxImportance});
+                        currPairList.push({"index": i, "left":pair.pages[0].page, "right":pair.pages[1].page, "matches": page.suspiciousPairs.length, "importance": page.maxImportance});
                         i++;
                     }
                     pageOrder.add(`[${pair.pages[0].page}, ${pair.pages[1].page}]`);
@@ -271,7 +286,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 return b.maxImportance - a.maxImportance;
             });
         }
-
         return suspiciousPages;
     };
 
@@ -1294,13 +1308,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         };
 
         nextButton.onclick = function(){
-            if (currPair === -1){
-                navbar.clear();
-                navbar.update(navbarRecords);
-                var navbarDiv = navbar.getNavbar();
-                addShowHide(navbarDiv);
-                navbarDiv.show();
-            }
             currPair++;
             if (currPair >= 0) {
                 navbar.updateSelection();
@@ -1384,6 +1391,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         }
         else{
             if (el) nextPage.removeChild(el);
+            if(!navbar.getNavbar()){
+                navbar.clear();
+                navbar.update(currPairList);
+                var navbarDiv = navbar.getNavbar();
+                addShowHide(navbarDiv);
+                navbarDiv.show();
+            }
             navbar.getNavbar().show();
             var nextComparison;
             if (comparisonPanel.el.parentNode===nextPage){
