@@ -23,6 +23,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var totalPages = 0;
     var currPair = -1;
     var navbar;
+    var sortOrderButtons;
     var ratings; // to be appended to the currently selected tag
     var comparisonConfig = {
         imgSimilarities: true,
@@ -37,7 +38,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         minTextCharacters: 1,
         minImportanceScoreEach: 5, // default value set to 5 (filters some out to begin with)
         // similarityThreshholdOverall: 0
-        sortByImportance: true
+        sortByImportance: true,
+        // sortBy: "page number"  // default sort order for carousel
+        sortBy: "importance"  // default sort order for carousel
+
     };
 
 
@@ -106,6 +110,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         nextButton.disabled = true;
 
         navbar.clear();
+        sortOrderButtons = null;
 
         var panels = carousel.getPanels();
         for (var i=0; i<panels.length; i++){
@@ -148,7 +153,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
       //Update the panel
         if (similarities){
             results = similarities;
-
           // modify similarity results depending on user selections in Settings menu
             update(getFilteredSimilarities(results));
         }
@@ -266,9 +270,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         });
 
 
-        if (comparisonConfig.sortByImportance){
+        if (comparisonConfig.sortBy === "importance"){
             suspiciousPages.sort(function (a,b){
                 return b.maxImportance - a.maxImportance;
+            });
+        }
+        else if (comparisonConfig.sortBy === "page number"){
+            suspiciousPages.sort(function (a,b){
+                return a.pageNumber - b.pageNumber;
             });
         }
 
@@ -397,7 +406,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** getFilteredSimilarities
   //**************************************************************************
     var getFilteredSimilarities = function(similarities, config){
-
+        console.log("getting filtered similarities again");
         // create new filtered json object from the raw similarities results
         if (!config){
             var config = comparisonConfig;
@@ -600,10 +609,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         // add maxImportanceScoreEach
             filteredSimilarities.maxImportanceScoreEach = maxImportanceScoreEach;
 
+        // console.log(JSON.stringify(filteredSimilarities, null, 4));
+        filteredSimilarities.suspicious_pairs.forEach((pair, i) =>{
+            console.log(pair.importance);
+        })
 
         sortByImportance();
-        return filteredSimilarities;
 
+        return filteredSimilarities;
     };
 
 
@@ -891,6 +904,115 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         td.colSpan = 2;
         tr.appendChild(td);
         var title = td;
+
+      // add sort order buttons
+        // var createSortOrderButtons = ()=>{
+        var td = document.createElement("td");
+        td.colSpan = 2;
+        td.className = "sortOrderButtons";
+        td.style.cssText = `
+        width: 100px;
+        height: 40px;
+        right: 180px;
+        top: -15px;
+        `;
+        // td.style.position = "absolute";
+
+        // var innerDiv = document.createElement("div");
+        // td.appendChild(innerDiv);
+
+        //Create form
+        form = new javaxt.dhtml.Form(td, {
+            style: config.style.form,
+            items: [
+                {
+                    group: "Sort By",
+                    items: [
+                        {
+                            name: "sortBy",
+                            label: "",
+                            type: "radio",
+                            alignment: "horizontal",
+                            options: [
+                                {
+                                    label: "Importance",
+                                    value: 1
+                                },
+                                {
+                                    label: "Page Number",
+                                    value: 2
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+
+        });
+        var sortByField = form.findField("sortBy");
+        var sortBy = comparisonConfig.sortBy;
+        if (sortBy === "importance"){
+            sortByField.setValue(1);
+        }
+        else if (sortBy === "page number"){
+            sortByField.setValue(2);
+        };
+
+        var sortBy;
+        form.onChange = function(){
+            var formSettings = form.getData();
+            // console.log(form.getData);
+
+            console.log("detecting form change");
+            console.log(formSettings.sortBy);
+            console.log(parseInt(formSettings.sortBy));
+            if (formSettings.sortBy === "1"){
+                sortBy = "importance";
+                console.log("got here2");
+                sortByField.setValue(1);
+            }
+            else if (formSettings.sortBy === "2"){
+                // console.log("got here1");
+                sortBy = "page number";
+                // console.log(toString(2));
+
+                sortByField.setValue(2);
+            };
+
+            if (sortBy !== comparisonConfig.sortBy){
+                comparisonConfig.sortBy = sortBy;
+
+                console.log(results);
+                console.log("getting results here ");
+                var savedResults = results;
+                me.clear();
+                results = savedResults;
+
+              // carousel
+                update(getFilteredSimilarities(results));
+
+              // navbar
+                navbar.update(navbarRecords);
+                var navbarDiv = navbar.getNavbar();
+                addShowHide(navbarDiv);
+                currPair = 0;
+                setTimeout(() => {
+                    navbar.updateSelection();
+                    raisePanel(false);
+
+                }, 1000);
+
+
+
+                // update(getFilteredSimilarities(results));
+
+                // me.update(getFilteredSimilarities(results));
+            };
+
+
+
+        }
+        tr.appendChild(td);
 
 
       //Create subtitle row
