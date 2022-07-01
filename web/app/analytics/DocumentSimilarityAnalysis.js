@@ -99,7 +99,7 @@ bluewave.analytics.DocumentSimilarityAnalysis = function(parent, config) {
 
         var createRecord = function(row){
             var r = {};
-            header.forEach((field, i)=>{ // -1
+            header.forEach((field, i)=>{
                 var v = row[i];
                 r[field] = v;
             });
@@ -110,15 +110,18 @@ bluewave.analytics.DocumentSimilarityAnalysis = function(parent, config) {
         var data = [];
         rows.forEach((row)=>{
             var doc = createRecord(row);
-            data.push({
-                A_ID: doc.A_ID,
-                A_PAGE: doc.A_PAGE,
-                B_ID: doc.B_ID,
-                B_PAGE: doc.B_PAGE,
-                COMPARISON_ID: doc.COMPARISON_ID,
-                IMPORTANCE: doc.IMPORTANCE,
-                TYPE: doc.TYPE
-            });
+            if (doc.IMPORTANCE >= 5){ // set to minimum value of default comparison config (removes anything less than 5 from results);
+                data.push({
+                    A_ID: doc.A_ID,
+                    A_PAGE: doc.A_PAGE,
+                    B_ID: doc.B_ID,
+                    B_PAGE: doc.B_PAGE,
+                    COMPARISON_ID: doc.COMPARISON_ID,
+                    IMPORTANCE: doc.IMPORTANCE,
+                    TYPE: doc.TYPE
+                });
+            };
+
         });
         grid.load(data);
         }
