@@ -18,6 +18,7 @@ bluewave.analytics.DocumentSimilarityAnalysis = function(parent, config) {
     };
     var grid;
     var documentSimilarities;
+    var firstLoad = true; // temporary thing
     var me = this;
 
   //**************************************************************************
@@ -81,6 +82,7 @@ bluewave.analytics.DocumentSimilarityAnalysis = function(parent, config) {
     // load datagrid
       // update datagrid from cached results
         populateDatagrid();
+
 
     };
 
@@ -220,6 +222,27 @@ bluewave.analytics.DocumentSimilarityAnalysis = function(parent, config) {
 
           // populate carousel with record from grid
             populateCarousel(row.record);
+
+            if (firstLoad){
+              // remove headers, footers, ect
+                setTimeout(() => {
+                    var headerDiv = document.getElementsByClassName("doc-compare-panel-title")[0];
+                    var trRows = headerDiv.parentNode.parentNode.getElementsByTagName("tr");
+
+                    var titleHeader = trRows[0];
+                    var subtitleHeader = trRows[1];
+
+                    titleHeader.parentNode.removeChild(titleHeader);
+                    subtitleHeader.parentNode.removeChild(subtitleHeader);
+
+                    var otherHeader = document.getElementsByClassName("dashboard-title noselect")[0];
+                    otherHeader.parentNode.removeChild(otherHeader);
+
+                    var footerArea = document.getElementsByClassName("doc-compare-panel-footer-navbar")[0].parentNode;
+                    footerArea.parentNode.removeChild(footerArea);
+                }, 1500);
+                firstLoad = false;
+            }
         };
     };
 
@@ -233,7 +256,6 @@ bluewave.analytics.DocumentSimilarityAnalysis = function(parent, config) {
               // update document comparison with the document
                 documentSimilarities.update(documentSimilarities.getFilteredResults(json));
                 var pairsList = documentSimilarities.getPairs();
-                console.log(pairsList);
                 pairsList.forEach((pair)=>{
                     if (parseInt(pair.left) === parseInt(record.A_PAGE) && parseInt(pair.right) === parseInt(record.B_PAGE)){
                         documentSimilarities.goToIndex(pair.index);
