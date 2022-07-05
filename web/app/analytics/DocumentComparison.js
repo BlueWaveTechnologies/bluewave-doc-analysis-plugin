@@ -15,6 +15,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var backButton, nextButton;
     var summaryPanel, comparisonPanel, comparisonPanel2;
     var waitmask;
+    var settingsEditor;
+    var settings;
     var pageOrder;
     var results = {};
     var navbarRecords;
@@ -619,6 +621,159 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         return filteredSimilarities;
     };
 
+  //**************************************************************************
+  //** createSettings
+  //**************************************************************************
+    var createSettings = function(parent){
+        // settings cogwheel and icon that is attached to the current page of the document comparison
+        // updated & re-attached when the page changes
+
+        var td = document.createElement("td");
+        settings = document.createElement("div");
+        settings.className = "doc-compare-panel-settings";
+        settings.innerHTML = '<i class="fas fa-cog"></i>';
+        td.colSpan = 2;
+        td.appendChild(settings);
+        parent.appendChild(td);
+
+        settings.onclick = function(){
+            if (!settingsEditor) {
+                settingsEditor = createSettingsContextMenu();
+            };
+            settingsEditor.show();
+        };
+        console.log(settings);
+
+        settings.detach = function(){
+            // if settings container div is attached somewhere within the dom, detach it
+                if (this.parentNode.parentNode ) this.parentNode.parentNode.removeChild(this.parentNode);
+        };
+
+        settings.attach = function(parent){
+            // append the settings container div to the first child of the parent element
+                parent.appendChild(this.parentNode);
+        };
+
+        settings.updateSelection = function(parent){
+            settings.detach();
+            settings.attach(parent.getElementsByClassName("doc-compare-panel-title")[0].parentNode);
+        };
+    };
+
+  //**************************************************************************
+  //** createSettingsContextMenu
+  //**************************************************************************
+    var createSettingsContextMenu = function(){
+
+        var config = {
+            style: javaxt.dhtml.style.default
+        };
+
+      //Update form
+        var editor = new javaxt.dhtml.Window(document.body, {
+            title: "Edit Settings",
+            width: 400,
+            valign: "top",
+            modal: false,
+            resizable: false,
+            style: config.style.window
+        });
+
+        var body = editor.getBody();
+        body.innerHTML = "";
+
+      //Create form
+        var form = new javaxt.dhtml.Form(body, {
+            style: config.style.form,
+            items: [
+                {
+                    group: "Sort By",
+                    items: [
+                        {
+                            name: "sortBy",
+                            label: "",
+                            type: "radio",
+                            alignment: "horizontal",
+                            options: [
+                                {
+                                    label: "Importance",
+                                    value: 1
+                                },
+                                {
+                                    label: "Page Number",
+                                    value: 2
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+
+        });
+
+        var sortByField = form.findField("sortBy");
+        var sortBy = comparisonConfig.sortBy;
+        if (sortBy === "importance"){
+            sortByField.setValue(1);
+        }
+        else if (sortBy === "page number"){
+            sortByField.setValue(2);
+        };
+
+        form.onChange = function(){
+            var formSettings = form.getData();
+            // console.log(form.getData);
+
+            console.log("detecting form change");
+            console.log(formSettings.sortBy);
+            console.log(parseInt(formSettings.sortBy));
+            if (formSettings.sortBy === "1"){
+                sortBy = "importance";
+                sortByField.setValue(1);
+            }
+            else if (formSettings.sortBy === "2"){
+                sortBy = "page number";
+
+                sortByField.setValue(2);
+            };
+
+            if (sortBy !== comparisonConfig.sortBy){
+                comparisonConfig.sortBy = sortBy;
+
+                console.log(results);
+                console.log("getting results here ");
+                var savedResults = results;
+                me.clear();
+                results = savedResults;
+
+              // carousel
+                update(getFilteredSimilarities(results));
+
+              // navbar
+                navbar.update(navbarRecords);
+                var navbarDiv = navbar.getNavbar();
+                addShowHide(navbarDiv);
+                currPair = 0;
+                setTimeout(() => {
+                    navbar.updateSelection();
+                    raisePanel(false);
+
+                }, 1000);
+
+
+
+                // update(getFilteredSimilarities(results));
+
+                // me.update(getFilteredSimilarities(results));
+            };
+
+        }
+      // render settings Editor to the left of cog wheel icon
+        var rect = javaxt.dhtml.utils.getRect(settings);
+        editor.showAt(rect.x - 400,rect.y);
+        form.resize();
+        return editor;
+    };
 
   //**************************************************************************
   //** createRatings
@@ -905,114 +1060,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         tr.appendChild(td);
         var title = td;
 
-      // add sort order buttons
-        // var createSortOrderButtons = ()=>{
-        var td = document.createElement("td");
-        td.colSpan = 2;
-        td.className = "sortOrderButtons";
-        td.style.cssText = `
-        width: 100px;
-        height: 40px;
-        right: 180px;
-        top: -15px;
-        `;
-        // td.style.position = "absolute";
 
-        // var innerDiv = document.createElement("div");
-        // td.appendChild(innerDiv);
-
-        //Create form
-        form = new javaxt.dhtml.Form(td, {
-            style: config.style.form,
-            items: [
-                {
-                    group: "Sort By",
-                    items: [
-                        {
-                            name: "sortBy",
-                            label: "",
-                            type: "radio",
-                            alignment: "horizontal",
-                            options: [
-                                {
-                                    label: "Importance",
-                                    value: 1
-                                },
-                                {
-                                    label: "Page Number",
-                                    value: 2
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-
-        });
-        var sortByField = form.findField("sortBy");
-        var sortBy = comparisonConfig.sortBy;
-        if (sortBy === "importance"){
-            sortByField.setValue(1);
-        }
-        else if (sortBy === "page number"){
-            sortByField.setValue(2);
-        };
-
-        var sortBy;
-        form.onChange = function(){
-            var formSettings = form.getData();
-            // console.log(form.getData);
-
-            console.log("detecting form change");
-            console.log(formSettings.sortBy);
-            console.log(parseInt(formSettings.sortBy));
-            if (formSettings.sortBy === "1"){
-                sortBy = "importance";
-                console.log("got here2");
-                sortByField.setValue(1);
-            }
-            else if (formSettings.sortBy === "2"){
-                // console.log("got here1");
-                sortBy = "page number";
-                // console.log(toString(2));
-
-                sortByField.setValue(2);
-            };
-
-            if (sortBy !== comparisonConfig.sortBy){
-                comparisonConfig.sortBy = sortBy;
-
-                console.log(results);
-                console.log("getting results here ");
-                var savedResults = results;
-                me.clear();
-                results = savedResults;
-
-              // carousel
-                update(getFilteredSimilarities(results));
-
-              // navbar
-                navbar.update(navbarRecords);
-                var navbarDiv = navbar.getNavbar();
-                addShowHide(navbarDiv);
-                currPair = 0;
-                setTimeout(() => {
-                    navbar.updateSelection();
-                    raisePanel(false);
-
-                }, 1000);
-
-
-
-                // update(getFilteredSimilarities(results));
-
-                // me.update(getFilteredSimilarities(results));
-            };
-
-
-
-        }
-        tr.appendChild(td);
+      // create Settings icon
+        createSettings(tr);
 
 
       //Create subtitle row
@@ -1107,6 +1157,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                 rightImage.matchingImg = leftImage; // update matched reference
                                 rightImage.LoadOverlay(); // render right image
 
+
+                                settings.updateSelection(rightImage.parentNode.parentNode.parentNode.parentNode);
                             });
                         });
 
