@@ -141,8 +141,24 @@ def get_version():
 #-------------------------------------------------------------------------------
 # MAIN
 #-------------------------------------------------------------------------------
-def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
+def main(
+    filenames,
+    methods,
+    pretty_print,
+    verbose=False, 
+    regen_cache=False,
+    sidecar_only=False,
+    no_importance=False
+):
     t0 = time.time()
+
+    if verbose: print('Reading files...')
+    read_pdf_sec_t0 = time.time()
+    file_data = get_file_data.main(filenames, regen_cache, version=VERSION)
+    read_pdf_sec = time.time() - read_pdf_sec_t0
+    if sidecar_only:
+        return
+
     assert len(filenames) >= 2, 'Must have at least 2 files to compare!'
 
     if not methods:
@@ -152,9 +168,11 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
 
     suspicious_pairs = []
 
-    if verbose: print('Reading files...')
-    file_data = get_file_data.main(filenames, regen_cache, version=VERSION)
-
+    page_analysis_sec = 0
+    digit_analysis_sec = 0
+    text_analysis_sec = 0
+    image_analysis_sec = 0
+    total_analysis_t0 = time.time()
     for i in range(len(filenames)-1):
         for j in range(i+1, len(filenames)):
             # i always less than j
@@ -162,6 +180,7 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
             b = file_data[j]
 
             # Find duplicate pages and remove those from the analysis
+            page_analysis_sec_t0 = time.time()
             if 'pages' in methods:
                 if verbose: print('Finding duplicate pages...')
                 duplicate_pages = pdf_duplicate_pages.find_duplicate_pages(
@@ -176,8 +195,10 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
             else:
                 a_new = a
                 b_new = b
+            page_analysis_sec += time.time() - page_analysis_sec_t0
 
             # Compare numbers
+            digit_analysis_sec_t0 = time.time()
             if 'digits' in methods:
                 if verbose: print('Comparing digits...')
                 digit_results = compare_pdfs_text.main(
@@ -188,8 +209,10 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
                     comparison_type_name='Common digit sequence',
                 )
                 suspicious_pairs.extend(digit_results)
+            digit_analysis_sec += time.time() - digit_analysis_sec_t0
 
             # Compare texts
+            text_analysis_sec_t0 = time.time()
             if 'text' in methods:
                 if verbose: print('Comparing texts...')
                 text_results = compare_pdfs_text.main(
@@ -200,8 +223,10 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
                     comparison_type_name='Common text string',
                 )
                 suspicious_pairs.extend(text_results)
+            text_analysis_sec += time.time() - text_analysis_sec_t0
 
             # Compare images
+            image_analysis_sec_t0 = time.time()
             if 'images' in methods:
                 if verbose: print('Comparing images...')
                 identical_images = compare_images(
@@ -229,6 +254,8 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
                             ]
                         }
                         suspicious_pairs.append(sus_result)
+            image_analysis_sec += time.time() - image_analysis_sec_t0
+        total_analysis_sec = time.time() - total_analysis_t0
 
     # Remove duplicate suspicious pairs (this might happen if a page has
     # multiple common substrings with another page)
@@ -241,8 +268,14 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
 
     # Calculate some more things for the final output
     if verbose: print('Gathering output...')
-    if verbose: print('\tAdd importance scores...')
-    suspicious_pairs = importance_score.main(suspicious_pairs)
+
+    importance_scoring_sec_t0 = time.time()
+    if not no_importance:
+        if verbose: print('\tAdd importance scores...')
+        suspicious_pairs = importance_score.main(suspicious_pairs)
+    importance_scoring_sec = time.time() - importance_scoring_sec_t0
+    
+    post_processing_sec_t0 = time.time()
     if verbose: print('\tGet file info...')
     file_info = get_file_info(file_data, suspicious_pairs)
     if verbose: print('\tGet total pages...')
@@ -252,6 +285,7 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
     if verbose: print('\tGet version...')
     version = get_version()
     if verbose: print('\tResults gathered.')
+    post_processing_sec = time.time() - post_processing_sec_t0
 
     dt = time.time() - t0
     if dt == 0:
@@ -263,7 +297,16 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
         'files': file_info,
         'suspicious_pairs': suspicious_pairs,
         'num_suspicious_pairs': len(suspicious_pairs),
-        'elapsed_time_sec': dt,
+        'elapsed_time_sec': {
+            'read_pdf': read_pdf_sec,
+            'page_analysis': page_analysis_sec,
+            'text_analysis': text_analysis_sec,
+            'digit_analysis': digit_analysis_sec,
+            'image_analysis': image_analysis_sec,
+            'total_analysis': total_analysis_sec,
+            'importance_scoring': importance_scoring_sec,
+            'post_processing': post_processing_sec,
+            'total_sec': dt},
         'pages_per_second': pages_per_second,
         'similarity_scores': similarity_scores,
         'version': version,
@@ -308,6 +351,16 @@ if __name__ == '__main__':
         action='store_true'
     )
     parser.add_argument(
+        '--sidecar_only',
+        help='Just generate sidecar files, dont run analysis',
+        action='store_true'
+    )
+    parser.add_argument(
+        '--no_importance',
+        help='Do not generate importance scores',
+        action='store_true'
+    )
+    parser.add_argument(
         '-v',
         '--verbose',
         help='Print things while running',
@@ -328,7 +381,9 @@ if __name__ == '__main__':
             methods=args.methods,
             pretty_print=args.pretty_print,
             verbose=args.verbose,
-            regen_cache=args.regen_cache
+            regen_cache=args.regen_cache,
+            sidecar_only=args.sidecar_only,
+            no_importance=args.no_importance,
             )
 
 # Within-file tests:

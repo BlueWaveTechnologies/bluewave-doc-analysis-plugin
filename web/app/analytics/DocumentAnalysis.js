@@ -29,7 +29,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         dateFormat: "M/D/YYYY h:mm A",
         style: {
 
-        }
+        },
+        showPreview: false
     };
 
     //Button components
@@ -1252,8 +1253,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
                 }
                 else{
+                    var config = defaultConfig;
                     previewPanel.update(r);
-                    previewPanel.show();
+                    if (config.showPreview){
+                        previewPanel.show();
+                    }
                 }
             };
 
@@ -1301,6 +1305,18 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         previewPanel.style.width = "";
         previewPanel.style.height = "100%";
         parent.appendChild(previewPanel);
+
+
+
+      // add references for access within DocumentSearch
+        previewPanel.id = "preview-panel";
+        previewPanel.getConfig = () =>{
+            return defaultConfig.showPreview;
+        };
+        previewPanel.setConfig = (bool)=>{
+            defaultConfig.showPreview = bool;
+        };
+
         var iframe = document.createElement("iframe");
         iframe.style.width = "100%";
         iframe.style.height = "100%";
