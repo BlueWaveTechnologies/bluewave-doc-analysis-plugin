@@ -7,7 +7,9 @@
       <script src="app/analytics/DocumentSearch.js" type="text/javascript"></script>
       <script src="app/analytics/DocumentAnalysis.js" type="text/javascript"></script>
       <script src="app/analytics/DocumentComparison.js" type="text/javascript"></script>
+      <script src="app/analytics/StatNavbar.js" type="text/javascript"></script>
       <script src="app/admin/ComparisonAdmin.js" type="text/javascript"></script>
+      <script src="app/analytics/DocumentSimilarityAnalysis.js" type="text/javascript"></script>
 
       <link href="style/doc-analysis.css" type="text/css" rel="stylesheet" />
 
@@ -16,7 +18,10 @@
 
     <dashboards>
       <dashboard name="Document Analysis" class="bluewave.analytics.DocumentAnalysis"/>
+      <dashboard name="Similarity Analysis" class="bluewave.analytics.DocumentSimilarityAnalysis"/>
     </dashboards>
+
+
 
 
     <extensions>
