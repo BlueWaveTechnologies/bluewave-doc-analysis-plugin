@@ -387,9 +387,11 @@ public class DocumentService extends WebService {
                 while (rs.hasNext()){
                     str.append("\n");
                     str.append(getString(rs));
-                    if (!searchMetadata.isEmpty()) str.append(",");
-                    JSONObject md = searchMetadata.get(rs.getValue("id").toLong());
-                    str.append(encode(md));
+                    if (!searchMetadata.isEmpty()){
+                        str.append(",");
+                        JSONObject md = searchMetadata.get(rs.getValue("id").toLong());
+                        str.append(encode(md));
+                    }
                     rs.moveNext();
                 }
                 rs.close();
@@ -1116,7 +1118,7 @@ public class DocumentService extends WebService {
                 dc.setInfo(result);
                 dc.save();
             }
-            
+
             JSONArray suspiciousPairs = result.get("suspicious_pairs").toJSONArray();
             Iterator pairIterator = suspiciousPairs.iterator();
             while (pairIterator.hasNext()) {
@@ -1135,7 +1137,7 @@ public class DocumentService extends WebService {
                         dss.save();
                     }
                 }
-            }            
+            }
         }
 
         return result;
@@ -1153,18 +1155,18 @@ public class DocumentService extends WebService {
             e.printStackTrace();
         }
         return rs;
-    }     
-    
+    }
+
     public ServiceResponse getSimilarityResults(ServiceRequest request, Database database)
         throws ServletException {
-        
+
         StringBuilder out = new StringBuilder();
         Connection conn = null;
-        
+
         try {
             conn = database.getConnection();
             Recordset rs = getSimilarityRecordSet(conn);
-            
+
             boolean addHeader = true;
             while (rs.hasNext()) {
                 Field[] fields = rs.getFields();
@@ -1191,7 +1193,7 @@ public class DocumentService extends WebService {
                         out.append(val);
                     }
                 }
-                
+
                 rs.moveNext();
             }
         } catch (Exception e) {
@@ -1204,7 +1206,7 @@ public class DocumentService extends WebService {
             }
         }
         return new ServiceResponse(out.toString());
-    }     
+    }
 
   //**************************************************************************
   //** getFile
