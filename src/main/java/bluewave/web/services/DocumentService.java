@@ -1,7 +1,10 @@
 package bluewave.web.services;
 import bluewave.Config;
+import bluewave.app.File;
+import bluewave.document.analysis.Utils;
 import bluewave.utils.FileIndex;
 import static bluewave.utils.Python.*;
+import bluewave.document.analysis.models.*;
 
 import java.util.*;
 import java.io.IOException;
@@ -20,13 +23,13 @@ import javaxt.http.servlet.FormValue;
 import javaxt.http.websocket.WebSocketListener;
 import javaxt.utils.ThreadPool;
 import javaxt.express.*;
+import javaxt.io.Directory;
 import javaxt.sql.*;
 import javaxt.json.*;
 
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
-import org.apache.pdfbox.io.MemoryUsageSetting;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 
 
@@ -43,7 +46,7 @@ public class DocumentService extends WebService {
 
     private ThreadPool pool;
     private FileIndex index;
-    private ConcurrentHashMap<String, JSONObject> scripts;
+    private static ConcurrentHashMap<String, JSONObject> scripts = new ConcurrentHashMap<>();
     private ConcurrentHashMap<Long, WebSocketListener> listeners;
     private static AtomicLong webSocketID;
 
@@ -57,7 +60,11 @@ public class DocumentService extends WebService {
         webSocketID = new AtomicLong(0);
         listeners = new ConcurrentHashMap<>();
         DocumentService me = this;
-
+        try {
+            Utils.initModels(Config.getDatabase());
+        }catch(Exception e) {
+            e.printStackTrace();
+        }
 
       //Start thread pool used to index files
         int numThreads = 20;
@@ -107,8 +114,6 @@ public class DocumentService extends WebService {
         }).start();
 
 
-
-        scripts = new ConcurrentHashMap<>();
     }
 
 
@@ -929,25 +934,45 @@ public class DocumentService extends WebService {
         if (documentIDs == null || documentIDs.length<2)
             return new ServiceResponse(400, "At least 2 documents are required");
 
+      //Compare documents and return result
+        Connection conn = null;
+        try{
+            conn = database.getConnection();
+            JSONObject result = getSimilarity(documentIDs, conn);
+            conn.close();
+            return new ServiceResponse(result);
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** getSimilarity
+  //**************************************************************************
+    public static JSONObject getSimilarity(String[] documentIDs, Connection conn)
+        throws Exception {
 
       //Get python script
         String scriptName = "compare_pdfs.py";
-        javaxt.io.File[] scripts = getScripts(scriptName);
-        if (scripts.length==0) return new ServiceResponse(500, "Script not found");
-        javaxt.io.File script = scripts[0];
+        javaxt.io.File[] pyFiles = getScripts(scriptName);
+        if (pyFiles.length==0) throw new Exception("Script not found");
+        javaxt.io.File script = pyFiles[0];
 
 
       //Get script verion
         String scriptVersion = null;
         long lastModified = script.getDate().getTime();
-        synchronized(this.scripts){
+        synchronized(scripts){
             try{
-                JSONObject info = this.scripts.get(script.getName());
+                JSONObject info = scripts.get(script.getName());
                 if (info==null){
                     info = new JSONObject();
                     info.set("lastModified", lastModified);
                     info.set("version", getScriptVersion(script));
-                    this.scripts.put(scriptName, info);
+                    scripts.put(scriptName, info);
                 }
                 else{
                     if (lastModified>info.get("lastModified").toLong()){
@@ -961,25 +986,25 @@ public class DocumentService extends WebService {
             catch(Exception e){
                 //Failed to get version
             }
-            this.scripts.notifyAll();
+            scripts.notifyAll();
         }
 
 
 
       //Check cache
-        ArrayList<bluewave.app.DocumentComparison> docs = new ArrayList<>();
+        ArrayList<DocumentComparison> docs = new ArrayList<>();
         if (documentIDs.length==2){
             String cacheQuery =
             "select ID, INFO from APPLICATION.DOCUMENT_COMPARISON " +
             "where (A_ID="+documentIDs[0]+" AND B_ID="+documentIDs[1]+") " +
                "OR (A_ID="+documentIDs[1]+" AND B_ID="+documentIDs[0]+")";
 
-            Connection conn = null;
+
             try {
 
               //Execute query
                 HashMap<Long, String> results = new HashMap<>();
-                conn = database.getConnection();
+
                 Recordset rs = new Recordset();
                 rs.open(cacheQuery, conn);
                 while (rs.hasNext()){
@@ -989,7 +1014,7 @@ public class DocumentService extends WebService {
                     rs.moveNext();
                 }
                 rs.close();
-                conn.close();
+
 
 
               //Parse json and return results if appropriate
@@ -1002,7 +1027,7 @@ public class DocumentService extends WebService {
                         String version = result.get("version").toString();
                         if (version!=null){
                             if (version.equals(scriptVersion)){
-                                return new ServiceResponse(result);
+                                return result;
                             }
                         }
                     }
@@ -1012,12 +1037,11 @@ public class DocumentService extends WebService {
               //Get current DocumentComparison from the database
                 it = results.keySet().iterator();
                 while (it.hasNext()){
-                    docs.add(new bluewave.app.DocumentComparison(it.next()));
+                    docs.add(new DocumentComparison(it.next()));
                 }
             }
             catch(Exception e) {
-                if(conn!=null) conn.close();
-                return new ServiceResponse(e);
+                throw e;
             }
         }
 
@@ -1036,10 +1060,10 @@ public class DocumentService extends WebService {
                 documents.add(document);
             }
             catch(Exception e){
-                return new ServiceResponse(e);
+                throw e;
             }
         }
-        if (files.size()<2) return new ServiceResponse(400, "At least 2 documents are required");
+        if (files.size()<2) throw new Exception("At least 2 documents are required");
 
 
 
@@ -1052,59 +1076,135 @@ public class DocumentService extends WebService {
         }
 
 
-      //Execute script and return response
-        try{
 
-          //Execute script
-            JSONObject result = executeScript(script, params);
+      //Execute script
+        JSONObject result = executeScript(script, params);
 
 
-          //Replace file paths and insert documentID
-            JSONArray arr = result.get("files").toJSONArray();
-            for (int i=0; i<arr.length(); i++){
-                JSONObject json = arr.get(i).toJSONObject();
-                String fileName = json.get("filename").toString();
-                String filePath = json.get("path_to_file").toString();
-                javaxt.io.File f = new javaxt.io.File(filePath, fileName);
-                bluewave.app.Document document = null;
-                for (int j=0; j<files.size(); j++){
-                    javaxt.io.File file = files.get(j);
-                    if (file.toString().replace("\\", "/").equals(f.toString().replace("\\", "/"))){
-                        document = documents.get(j);
-                        break;
+      //Replace file paths and insert documentID
+        JSONArray arr = result.get("files").toJSONArray();
+        for (int i=0; i<arr.length(); i++){
+            JSONObject json = arr.get(i).toJSONObject();
+            String fileName = json.get("filename").toString();
+            String filePath = json.get("path_to_file").toString();
+            javaxt.io.File f = new javaxt.io.File(filePath, fileName);
+            bluewave.app.Document document = null;
+            for (int j=0; j<files.size(); j++){
+                javaxt.io.File file = files.get(j);
+                if (file.toString().replace("\\", "/").equals(f.toString().replace("\\", "/"))){
+                    document = documents.get(j);
+                    break;
+                }
+            }
+            json.set("document_id", document.getID());
+            json.remove("path_to_file");
+        }
+
+
+
+      //Cache the results
+        if (documents.size()==2){
+
+            if (docs.isEmpty()){
+                DocumentComparison dc = new DocumentComparison();
+                dc.setA(documents.get(0));
+                dc.setB(documents.get(1));
+                docs.add(dc);
+            }
+
+            for (DocumentComparison dc : docs){
+                dc.setInfo(result);
+                dc.save();
+            }
+            
+            JSONArray suspiciousPairs = result.get("suspicious_pairs").toJSONArray();
+            Iterator pairIterator = suspiciousPairs.iterator();
+            while (pairIterator.hasNext()) {
+                JSONObject pair = (JSONObject) pairIterator.next();
+                if (pair.has("pages")) {
+                    JSONArray pages = pair.get("pages").toJSONArray();
+                    if (pages.length() >= 2) {
+                        JSONObject pageA = pages.get(0).toJSONObject();
+                        JSONObject pageB = pages.get(1).toJSONObject();
+                        DocumentComparisonSimilarity dss = new DocumentComparisonSimilarity();
+                        dss.setType(pair.get("type").toString());
+                        dss.setA_page(pageA.get("page").toInteger());
+                        dss.setB_page(pageB.get("page").toInteger());
+                        dss.setImportance(pair.get("importance").toInteger());
+                        dss.setComparison(DocumentComparison.get("ID=", docs.get(0).getID()));
+                        dss.save();
                     }
                 }
-                json.set("document_id", document.getID());
-                json.remove("path_to_file");
-            }
-
-
-
-          //Cache the results
-            if (documents.size()==2){
-
-                if (docs.isEmpty()){
-                    bluewave.app.DocumentComparison dc = new bluewave.app.DocumentComparison();
-                    dc.setA(documents.get(0));
-                    dc.setB(documents.get(1));
-                    docs.add(dc);
-                }
-
-                for (bluewave.app.DocumentComparison dc : docs){
-                    dc.setInfo(result);
-                    dc.save();
-                }
-            }
-
-
-          //Return response
-            return new ServiceResponse(result);
+            }            
         }
-        catch(Exception e){
-            return new ServiceResponse(e);
-        }
+
+        return result;
     }
 
+    public static Recordset getSimilarityRecordSet(Connection conn) throws Exception {
+
+        String query = "select dcs.COMPARISON_ID, dcs.TYPE, dcs.A_PAGE, dcs.B_PAGE, dcs.IMPORTANCE, dc.A_ID, dc.B_ID  \n"
+                + "from APPLICATION.DOCUMENT_COMPARISON_SIMILARITY as dcs \n"
+                + "JOIN APPLICATION.DOCUMENT_COMPARISON as dc on dcs.COMPARISON_ID = dc.ID";
+        Recordset rs = new javaxt.sql.Recordset();
+        try {
+            rs.open(query, conn);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return rs;
+    }     
+    
+    public ServiceResponse getSimilarityResults(ServiceRequest request, Database database)
+        throws ServletException {
+        
+        StringBuilder out = new StringBuilder();
+        Connection conn = null;
+        
+        try {
+            conn = database.getConnection();
+            Recordset rs = getSimilarityRecordSet(conn);
+            
+            boolean addHeader = true;
+            while (rs.hasNext()) {
+                Field[] fields = rs.getFields();
+                if (addHeader) {
+                    for (int i = 0; i < fields.length; i++) {
+                        if (i > 0) {
+                            out.append(",");
+                        }
+                        out.append(fields[i].getName());
+                    }
+                    addHeader = false;
+                }
+
+                out.append("\n");
+                for (int i = 0; i < fields.length; i++) {
+                    if (i > 0) {
+                        out.append(",");
+                    }
+                    String val = fields[i].getValue().toString();
+                    if (val != null) {
+                        if (val.contains(",")) {
+                            val = "\"" + val + "\"";
+                        }
+                        out.append(val);
+                    }
+                }
+                
+                rs.moveNext();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if(conn != null) conn.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return new ServiceResponse(out.toString());
+    }     
 
   //**************************************************************************
   //** getFile
@@ -1144,7 +1244,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getOrCreatePath
   //**************************************************************************
-    private bluewave.app.Path getOrCreatePath(javaxt.io.Directory dir){
+    public static bluewave.app.Path getOrCreatePath(javaxt.io.Directory dir){
         String p = dir.toString();
 
         try{
@@ -1170,7 +1270,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getOrCreateFile
   //**************************************************************************
-    private bluewave.app.File getOrCreateFile(javaxt.io.File file, bluewave.app.Path path){
+    public static bluewave.app.File getOrCreateFile(javaxt.io.File file, bluewave.app.Path path){
         try{
             return bluewave.app.File.find(
                 "name=", file.getName(),
@@ -1200,7 +1300,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getOrCreateDocument
   //**************************************************************************
-    private bluewave.app.Document getOrCreateDocument(bluewave.app.File f){
+    public static bluewave.app.Document getOrCreateDocument(bluewave.app.File f){
 
         try{
             return bluewave.app.Document.find(
@@ -1327,7 +1427,7 @@ public class DocumentService extends WebService {
                 Map<String, Long> constraints = new HashMap<>();
                 constraints.put("a_id=", docId);
                 constraints.put("b_id=", docId);
-                for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find(constraints)){
+                for (DocumentComparison dc : DocumentComparison.find(constraints)){
                     dc.delete();
                 }
 
