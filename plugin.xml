@@ -40,7 +40,17 @@
   </webservices>
 
   <main>
-    <test arg="Document" class="bluewave.utils.FileIndex" method="test"/>
+
+    <test arg="DocumentAnalysis" class="bluewave.document.analysis.Utils" method="test"/>
+    <test arg="FileIndex" class="bluewave.utils.FileIndex" method="test"/>
+
+    <compare arg="Compare" class="bluewave.test.BulkCompare" method="compare"/>
+    <compare arg="Benchmark" class="bluewave.test.BulkCompare" method="benchmark"/>
+    <compare arg="Report" class="bluewave.test.BulkCompare" method="exportReport"/>
+
+    <delete arg="DocumentComparison" class="bluewave.document.analysis.Utils" method="deleteDocumentComparison"/>
+    <delete arg="DocumentIndex" class="bluewave.document.analysis.Utils" method="deleteDocumentIndex"/>
+
   </main>
 
 </plugin>
