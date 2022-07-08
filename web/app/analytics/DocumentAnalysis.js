@@ -1905,6 +1905,23 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             });
         };
 
+        mainButton["downloadSelected"] = createButton("Download Selected", leftSideButtons);
+        mainButton["downloadSelected"].style.width = "140px";
+        mainButton["downloadSelected"].onclick = function(){
+          // download the selected documents
+            selectedDocuments.forEach((doc)=>{
+                var url = "document?id=" + doc.id;
+              // create DOM element exclusively for downloads - download requires click event
+                var a = document.createElement("a");
+                a.download = doc.name;
+                a.href = url;
+                document.body.appendChild(a);
+                console.log(a);
+                a.click(); // call download
+                document.body.removeChild(a);
+            });
+        };
+
         updateButtons();
     };
 
@@ -1945,12 +1962,14 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 mainButton["next"].enable();
                 mainButton["selectAll"].enable();
                 selectedSelectAllPanel = searchPanel;
+                mainButton["downloadSelected"].enable();
 
             }
             else if (selectedPanelName == "Selected Documents") {
                 mainButton["back"].enable();
                 mainButton["next"].disable();
                 mainButton["selectAll"].disable();
+                mainButton["downloadSelected"].disable();
             }
 
             // update SelectAll button text
@@ -1960,6 +1979,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             };
         };
     };
+
 
 
   //**************************************************************************
