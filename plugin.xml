@@ -15,7 +15,19 @@
 
 
     <dashboards>
-      <dashboard name="Document Analysis" class="bluewave.analytics.DocumentAnalysis"/>
+      <dashboard name="Document Analysis" class="bluewave.analytics.DocumentAnalysis">
+        <info>
+          <description>
+            <![CDATA[
+            Dashboard used to automatically analyze 510(k) submissions and detect similarities.
+            Within some of the similarities there is evidence of plagerism and fraud.
+
+            This dashboard has been developed for OPEQ investigators and is under active development.
+            ]]>
+          </description>
+        </info>
+        <thumbnail src="images/numbers.jpg"></thumbnail>
+      </dashboard>
     </dashboards>
 
 
