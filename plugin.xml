@@ -16,7 +16,19 @@
 
 
     <dashboards>
-      <dashboard name="Document Analysis" class="bluewave.analytics.DocumentAnalysis"/>
+      <dashboard name="Document Analysis" class="bluewave.analytics.DocumentAnalysis">
+        <info>
+          <description>
+            <![CDATA[
+            Dashboard used to automatically analyze 510(k) submissions and detect similarities.
+            Within some of the similarities there is evidence of plagerism and fraud.
+
+            This dashboard has been developed for OPEQ investigators and is under active development.
+            ]]>
+          </description>
+        </info>
+        <thumbnail src="images/numbers.jpg"></thumbnail>
+      </dashboard>
     </dashboards>
 
 
@@ -40,7 +52,17 @@
   </webservices>
 
   <main>
-    <test arg="Document" class="bluewave.utils.FileIndex" method="test"/>
+
+    <test arg="DocumentAnalysis" class="bluewave.document.analysis.Utils" method="test"/>
+    <test arg="FileIndex" class="bluewave.utils.FileIndex" method="test"/>
+
+    <compare arg="Compare" class="bluewave.test.BulkCompare" method="compare"/>
+    <compare arg="Benchmark" class="bluewave.test.BulkCompare" method="benchmark"/>
+    <compare arg="Report" class="bluewave.test.BulkCompare" method="exportReport"/>
+
+    <delete arg="DocumentComparison" class="bluewave.document.analysis.Utils" method="deleteDocumentComparison"/>
+    <delete arg="DocumentIndex" class="bluewave.document.analysis.Utils" method="deleteDocumentIndex"/>
+
   </main>
 
 </plugin>
