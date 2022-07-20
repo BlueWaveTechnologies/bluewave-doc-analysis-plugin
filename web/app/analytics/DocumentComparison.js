@@ -791,15 +791,15 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
 
-        tag.onclick = function (){
-            if (!ratings) {
-                ratings = createRatings();
-                ratings.attach(this.parentNode);
-            };
-            ratings.update(this);
-            this.matchingD.select();
-            this.matchingTag.hide();
-        };
+        // tag.onclick = function (){
+        //     if (!ratings) {
+        //         ratings = createRatings();
+        //         ratings.attach(this.parentNode);
+        //     };
+        //     ratings.update(this);
+        //     this.matchingD.select();
+        //     this.matchingTag.hide();
+        // };
 
         tag.removeSimilarity = function(){
             this.matchingD.removeSimilarity();
