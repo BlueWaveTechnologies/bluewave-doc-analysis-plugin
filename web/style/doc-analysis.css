@@ -330,3 +330,17 @@
 .document-search-info {
     color: #777;
 }
+
+.document-search-search-bar-results {
+    width: 105px;
+    height: 5px;
+    color: #b9b9b9;
+    padding: 2px 0px 0px 0px;
+    cursor: pointer;
+    font-size: 14px;
+    top: 9px;
+    position: absolute;
+    right: 30px;
+    z-index: 5;
+    text-align: center;
+}
