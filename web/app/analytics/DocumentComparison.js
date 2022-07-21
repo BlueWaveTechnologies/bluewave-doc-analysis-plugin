@@ -10,7 +10,6 @@ if(!bluewave.analytics) bluewave.analytics={};
  ******************************************************************************/
 
 bluewave.analytics.DocumentComparison = function(parent, config) {
-
     var me = this;
     var carousel;
     var backButton, nextButton;
@@ -942,16 +941,18 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             if (!img.isFirstDocument){ // render left image first and then load this (right) image
                 img.onload = function(){
                     img = this;
+                    var visiblePanels = []; // when the document analysis window is rendered for the first time both panels are visible, if both panels are visible, render in first panel
                     clearOverlay();
                     if (currPair<0){
                         carousel.getPanels().forEach((panel)=>{
                             if (panel.isVisible){
-                                panel.div.removeChild(panel.div.firstChild);
-                                panel.div.appendChild(summaryPanel.el);
-                                navbar.hide();
-                                return;
+                                visiblePanels.push(panel);
                             };
                         });
+                        var panel = visiblePanels[0];
+                        panel.div.removeChild(panel.div.firstChild);
+                        panel.div.appendChild(summaryPanel.el);
+                        navbar.hide();
                     };
                     setTimeout(function(){
                         getImages(img).forEach((rightImage)=>{
