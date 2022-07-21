@@ -24,7 +24,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var comparisonsEnabled = true;
     var remoteSearch = false;
     var ws;
-    var maxImportanceScoreEach = 0;
 
     var defaultConfig = {
         dateFormat: "M/D/YYYY h:mm A",
@@ -425,8 +424,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 var totalText = 0;
                 var totalDigit = 0;
 
-                maxImportanceScoreEach = 0;
-
                 grid.forEachRow((row)=>{
                  // get the original unmodified record
                     var recordVar = row.record;
@@ -437,11 +434,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                       // create modified copy (used for setting row link)
                         var newResults = documentSimilarities.getFilteredResults(similarity.results);
                         newSimilarities.push({ id: similarity.id, results: newResults});
-
-                      // set new max importance score
-                        if (newResults.maxImportanceScoreEach > maxImportanceScoreEach){
-                            maxImportanceScoreEach = newResults.maxImportanceScoreEach;
-                        };
 
                       // add to total for each type of match
                         totalDigit += newResults.digitCount;
@@ -941,7 +933,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
 
     // Use slider for minImportanceScoreEach
-        var minImportanceScoreSlider = createSlider("minImportanceScoreEach", form, "", 0, maxImportanceScoreEach, 1); // min, max, inc
+        var minImportanceScoreSlider = createSlider("minImportanceScoreEach", form, "", 0, 100, 1); // min, max, inc
 
     //Set initial value for minImportanceScoreEach
         var minImportanceScoreEachField = form.findField("minImportanceScoreEach");
@@ -972,8 +964,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 comparisonConfig.minTextCharacters = formSettings.minTextCharacters;
                 comparisonConfig.duplicatePageSimilarities = formSettings.duplicatePageSimilarities;
 
-            // reset sliders
-                minImportanceScoreSlider.setAttribute("max", maxImportanceScoreEach);
         };
 
     //Process onChange events
