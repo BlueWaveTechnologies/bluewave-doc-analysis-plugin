@@ -10,13 +10,13 @@ if(!bluewave.analytics) bluewave.analytics={};
  ******************************************************************************/
 
 bluewave.analytics.DocumentAnalysis = function(parent, config) {
-
     var me = this;
     var panels = [];
     var nav, carousel, sliding;
     var selectedDocuments; //datastore
     var searchPanel, previewPanel;
     var similarityResults, documentSimilarities;
+    var errorResults, documentErrors;
     var windows = [];
     var settingsEditor;
     var formTotals;
@@ -452,7 +452,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
                     // set new link for this row in the grid
                     row.set("Comparison Results", getRowName(newSimilarities, originalSimilarities, row));
-
                 });
 
              // update formTotals object for use by settings form
@@ -498,6 +497,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         if (document.id){
                             jobs.push({
                                 doc: document.id,
+                                filename: document.name,
                                 otherDocs: arr
                             });
                         }
@@ -1475,6 +1475,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** compareDocuments
   //**************************************************************************
     var compareDocuments = function(jobs, onCompletion){
+        var jobsWithId = [];
+        for (var i in jobs){
+            jobsWithId.push({"jobName": jobs[i].doc, "filename": jobs[i].filename})
+        }
+
         var runJob = function(){
             if (!comparisonsEnabled) jobs.splice(0,jobs.length);
 
@@ -1485,13 +1490,34 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
             var job = jobs.shift();
             job.row.set("Comparison Results", "Pending...");
+            var jobsList = [];
+
+            function getValue(key, array, value) {
+                for (var el in array) {
+                  if (array[el].hasOwnProperty(key)) {
+                    if (array[el][key] === value){
+                        var filename = array[el].filename;
+                        return filename;
+                    };
+                  }
+                }
+              };
+
+
             getSimilarities(job.doc, job.otherDocs,
-                function(step, totalSteps, success){
-                    job.row.set("Comparison Results", Math.round((step/totalSteps)*100) + "%");
+                function(step, totalSteps, success, doc){
+                    if (success) job.row.set("Comparison Results", Math.round((step/totalSteps)*100) + "%");
+
+                    var filename = getValue("jobName",jobsWithId, doc);
+
+                    jobsList.push({"docName":doc, "filename":filename, "status":success});
+                    job.row.record.docStatus = jobsList;
                 },
                 function(similarities, originalSimilarities){
+
                     job.row.record.similarities = originalSimilarities;
                     job.row.set("Comparison Results", getRowName(similarities, originalSimilarities, job.row));
+
                     runJob();
                 }
             );
@@ -1503,10 +1529,36 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** getRowName
   //**************************************************************************
     var getRowName = function(similarities, originalSimilarities, row){
+
+
         var numSimilarities = 0;
         var numOriginalSimilarities = 0;
         var totalMatches = 0;
         var hiddenMatches = 0;
+        var totalError = 0;
+
+        // get total errored files
+        row.record.docStatus.forEach((doc)=>{
+            if (!doc.status){
+                totalError++;
+            };
+        });
+
+        var addErrorLink = function(parent){
+            createSpacer(parent);
+            var link = document.createElement("a");
+            var string = totalError + " file errors";
+
+            link.innerText = string;
+            link.style.color = "red";
+            link.record = row.record;
+            link.onclick = function(){
+                showSimilarityErrors(this.record);
+            };
+            parent.appendChild(link);
+        };
+
+
         similarities.forEach((similarity)=>{
             totalMatches += similarity.results.num_suspicious_pairs;
             if (similarity.results.num_suspicious_pairs>0) numSimilarities++;
@@ -1517,11 +1569,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         hiddenMatches = numOriginalSimilarities - totalMatches;
 
+
         var summaryIcon, summaryText;
         if (numSimilarities === 0 && hiddenMatches === 0){
             summaryIcon = "far fa-check-circle";
             summaryText = "No matches found";
         }
+
         else if (numSimilarities === 0 && hiddenMatches > 0){
             summaryIcon = "far fa-check-circle";
             summaryText = "No matches found (" + hiddenMatches + " hidden)";
@@ -1547,6 +1601,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             summaryText = link;
         }
 
+
         var summary = document.createElement("div");
         summary.className = "document-analysis-comparison-results";
         var icon = document.createElement("div");
@@ -1559,7 +1614,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         else{
             span.appendChild(summaryText);
         }
-
+        if (totalError>0){
+            addErrorLink(span);
+        }
         summary.appendChild(span);
 
         return summary;
@@ -1588,6 +1645,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             var b = otherDocs.shift();
             steps++;
 
+
             get("document/similarity?documents="+doc+","+b,{
                 success: function(json){
                     if (!documentSimilarities) createDocumentSimilarities();
@@ -1597,24 +1655,94 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         id: b,
                       // get the default, baseline filtered results from documentComparison
                         results: documentSimilarities.getFilteredResults(json)
+
                     });
                     originalSimilarities.push({
                         id: b,
                         results: json
                     });
 
-                    if (onStep) onStep.apply(me, [steps,totalSteps,true]);
+                    if (onStep) onStep.apply(me, [steps,totalSteps,true,b]);
                     getSimilarity(doc, otherDocs);
                 },
                 failure: function(){
-                    if (onStep) onStep.apply(me, [steps,totalSteps,false]);
+                    if (onStep) onStep.apply(me, [steps,totalSteps,false,b]);
                     getSimilarity(doc, otherDocs);
+
                 }
             });
         };
 
         getSimilarity(doc, otherDocs);
 
+    };
+
+
+  //**************************************************************************
+  //** showSimilarityErrors
+  //**************************************************************************
+    var showSimilarityErrors = function(doc){
+        if (!errorResults){
+
+            var win = createWindow({
+                title: "Similarity Errors",
+                width: 800,
+                height: 450,
+                valign: "top",
+                modal: true,
+                style: config.style.window
+            });
+
+
+        //Create data grid
+            var grid = new javaxt.dhtml.DataGrid(win.getBody(), {
+                style: config.style.table,
+                localSort: true,
+                columns: [
+                    {header: 'Status', width:'100%', sortable: true},
+                    {header: 'File ID', width:'120', sortable: true},
+                    {header: 'File Name', width:'200', sortable: true}
+
+                ],
+                update: function(row, record){
+
+                    if (record.results.status === false){
+                        var status = "Failed to run a comparison for this file";
+                    };
+                    row.set("File ID", record.results.docId);
+                    row.set("File Name", record.results.filename);
+                    row.set("Status", status);
+                }
+            });
+
+            errorResults = {
+                update: function(document){
+                    win.setTitle("Similarity Errors - " + document.name);
+                    grid.clear();
+
+                //Create records for the grid
+                    var data = [];
+
+                    //Create record
+                    for (var i in document.docStatus){
+                        var currentDoc = document.docStatus[i];
+
+                        data.push({
+                            id: document.id,
+                            results: {"docId":currentDoc.docName, "filename":currentDoc.filename, "status":currentDoc.status}
+                        });
+                    };
+
+                    grid.load(data);
+
+                },
+                show: win.show
+            };
+
+        }
+
+        errorResults.update(doc);
+        errorResults.show();
     };
 
 
