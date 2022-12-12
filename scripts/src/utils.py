@@ -1,8 +1,13 @@
+import json
+import os
+from pathlib import Path
+
 import numpy as np
 
-#-------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------
 # UTILS
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 class Box:
     def __init__(self, xmin, ymin, xmax, ymax):
         self.xmin = xmin
@@ -14,7 +19,7 @@ class Box:
         self.area = self.width * self.height
 
     def __repr__(self):
-        return f'({self.xmin},{self.ymin},{self.xmax},{self.ymax})'
+        return f"({self.xmin},{self.ymin},{self.xmax},{self.ymax})"
 
     def intersection(self, box2):
         xmin = max(self.xmin, box2.xmin)
@@ -43,10 +48,10 @@ class Box:
         # new_area can be infinitely large, union_area is at most the sum
         #  of the two box areas
         d = (new_area / union_area) - 1
-        return max(0, d) # no negative distances
+        return max(0, d)  # no negative distances
 
     def as_tuple(self):
-        return (self.xmin, self.ymin, self.xmax, self.ymax)
+        return self.xmin, self.ymin, self.xmax, self.ymax
 
 
 # class Block:
@@ -85,23 +90,19 @@ class Box:
 #         }
 
 
-
-def get_datadir():
-    import os 
-    from pathlib import Path
-    currdir = os.path.dirname(os.path.realpath(__file__)) 
-    parentdir = str(Path(currdir).parent) 
-    return parentdir + os.path.sep + 'data'
+def get_models_directory():
+    current_directory = os.path.dirname(os.path.realpath(__file__))
+    parent_directory = str(Path(current_directory).parent)
+    return parent_directory + os.path.sep + "models"
 
 
-def list_of_unique_dicts(L):
-    import json
+def list_of_unique_dicts(dicts):
     # https://stackoverflow.com/questions/11092511/python-list-of-unique-dictionaries
-    return list({json.dumps(v, sort_keys=True): v for v in L}.values())
+    return list({json.dumps(v, sort_keys=True): v for v in dicts}.values())
 
 
 def get_digits(text):
-    digits = ''
+    digits = ""
     n_letters = 0
     for c in text:
         if c.isnumeric():
@@ -111,7 +112,7 @@ def get_digits(text):
             n_letters += 1
     try:
         if len(text) > 10 and len(digits) / n_letters < 0.1:
-            return ''
+            return ""
     except ZeroDivisionError:
         pass
 

@@ -1,9 +1,9 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
 import pandas as pd
 import pickle
 import numpy as np
+
+
 # import argparse
 
 
@@ -35,10 +35,9 @@ import numpy as np
 
 
 def read_text_training_data():
-
-    df = pd.read_csv('data/pair_output_1.csv')
-    df = df.drop_duplicates(['text'])
-    df['text'] = df['text'].fillna('')
+    df = pd.read_csv("data/pair_output_1.csv")
+    df = df.drop_duplicates(["text"])
+    df["text"] = df["text"].fillna("")
 
     return df
 
@@ -53,12 +52,13 @@ def read_text_training_data():
 
 
 def create_and_train_classifier(X_train, y_train):
-    import compare_pdfs_util
+    import utils
     from sklearn import linear_model
+
     # clf = LogisticRegression(random_state=0)
     # clf = RandomForestClassifier(random_state=0)
     y_train_clipped = np.clip(y_train, 0.0001, 0.9999)
-    y_train_transf = compare_pdfs_util.logit(y_train_clipped)
+    y_train_transf = utils.logit(y_train_clipped)
     clf = linear_model.LinearRegression()
     clf.fit(X_train, y_train_transf)
     return clf
@@ -68,16 +68,18 @@ def create_performance_report(X, y):
     import time
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import classification_report
+
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=0)
+        X, y, test_size=0.2, random_state=0
+    )
 
     clf = create_and_train_classifier(X_train, y_train)
 
     y_pred = clf.predict(X_test)
-    target_names = ['not significant', 'significant']
+    target_names = ["not significant", "significant"]
     report = classification_report(y_test, y_pred, target_names=target_names)
-    with open('classification_report.txt', 'a') as f:
-        f.write(time.ctime()+'\n')
+    with open("classification_report.txt", "a") as f:
+        f.write(time.ctime() + "\n")
         f.write(report)
 
 
@@ -87,30 +89,30 @@ def main(filename):
 
     # Clear classification report
     # if os.path.exists('classification_report.txt'):
-        # os.rm('classification_report.txt')
+    # os.rm('classification_report.txt')
 
     # Read data
     df = read_text_training_data()
 
     # X
     vectorizer = TfidfVectorizer(min_df=3)
-    vecs = vectorizer.fit_transform(df['text']).toarray()
-    dummies = pd.get_dummies(df['type']).values
+    vecs = vectorizer.fit_transform(df["text"]).toarray()
+    dummies = pd.get_dummies(df["type"]).values
     X_train = np.hstack((vecs, dummies))
 
     # y
-    y_train = df['importance'].astype(float).fillna(0)
+    y_train = df["importance"].astype(float).fillna(0)
 
     clf = create_and_train_classifier(X_train, y_train)
     # create_performance_report(X_train, labels_train)
 
     all_my_stuff = (vectorizer, clf)
-    with open('data/clf.p', 'wb') as f:
+    with open("data/clf.p", "wb") as f:
         pickle.dump(all_my_stuff, f, protocol=4)
-    print('Model saved.')
+    print("Model saved.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # parser = argparse.ArgumentParser()
     # parser.add_argument(
     #     '-f',
