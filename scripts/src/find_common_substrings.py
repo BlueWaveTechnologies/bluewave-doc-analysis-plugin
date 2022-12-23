@@ -1,7 +1,18 @@
 import numpy as np
 from pydivsufsort import divsufsort, kasai
-TEXT_SEP = '^_^'
-PAGE_SEP = '@@@'
+
+TEXT_SEP = "^_^"
+PAGE_SEP = "@@@"
+
+
+def is_subset_of_any_existing(new, existing):
+    new_start, new_end = new
+    for j1, _, h in existing:
+        ex_start = j1
+        ex_end = j1 + h
+        if ex_start <= new_start and new_end <= ex_end:
+            return True
+    return False
 
 
 def find_common_substrings(text1, text2, min_len):
@@ -37,7 +48,7 @@ def find_common_substrings(text1, text2, min_len):
     #   - cd
     #
     # We sort the candidates by length and remove those that are substrings of
-    # any previous candidate. Thus we are left with "bcd".
+    # any previous candidate. Thus, we are left with "bcd".
 
     text_combined = text1 + TEXT_SEP + text2
     sa = divsufsort(text_combined)
@@ -46,16 +57,16 @@ def find_common_substrings(text1, text2, min_len):
     lcp = np.array(lcp[:-1])
 
     # Collect candidates
-    candidates = []
-    l = len(text1)
+    # candidates = []
+    length = len(text1)
     j1s = np.array(sa[:-1])
     j2s = np.array(sa[1:])
     j_min = np.minimum(j1s, j2s)
     j_max = np.maximum(j1s, j2s)
 
     is_long_enough = lcp > min_len
-    is_in_both = (j_min < l) & (j_max > l)
-    does_not_cross = ~((j_min < l) & (j_min + lcp > l))
+    is_in_both = (j_min < length) & (j_max > length)
+    does_not_cross = ~((j_min < length) & (j_min + lcp > length))
 
     is_ok = is_long_enough & is_in_both & does_not_cross
 
@@ -73,27 +84,20 @@ def find_common_substrings(text1, text2, min_len):
 
     # Go through and take out overlapping substrings
 
-    def is_subset_of_any_existing(new, existing):
-        new_start, new_end = new
-        for j1, _, h in existing:
-            ex_start = j1
-            ex_end = j1 + h
-            if ex_start <= new_start and new_end <= ex_end:
-                return True
-        return False
-
-    offset = l+len(TEXT_SEP) # What to substract to get index of occurrence in text2 
+    offset = length + len(
+        TEXT_SEP
+    )  # What to substract to get index of occurrence in text2
     non_overlapping = []
-    LIMIT = 100000
-    for j1, j2, h in zip(my_jmin[:LIMIT], my_jmax[:LIMIT], my_h[:LIMIT]):
+    limit = 100000
+    for j1, j2, h in zip(my_jmin[:limit], my_jmax[:limit], my_h[:limit]):
         start = j1
         end = j1 + h
         if not is_subset_of_any_existing(new=(start, end), existing=non_overlapping):
-            non_overlapping.append((j1, j2-offset, h))
+            non_overlapping.append((j1, j2 - offset, h))
 
     result = []
     for k1, k2, h in non_overlapping:
-        substr = text1[k1:k1+h]
+        substr = text1[k1 : k1 + h]
         if len(substr.strip()) > min_len:
             result.append((substr, k1, k2, h))
 
